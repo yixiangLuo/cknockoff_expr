@@ -1,4 +1,3 @@
-library(mvtnorm)  # rmvnorm
 
 # weighted BH method
 BH_weighted <- function(pvals, alpha,
