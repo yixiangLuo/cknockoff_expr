@@ -12,12 +12,12 @@ source(here("R", "methods.R"))
 experiment <- "main_expr_midScale"
 
 p <- 300
-n <- 3*(p+1)
-X_types <- c("IID_Normal", "MCC", "Homo_Block", "Coef_AR")
+n <- 3*p
+X_types <- c("IID_Normal", "MCC", "Homo_Block", "Coef_AR", "X_AR")
 X_seed <- 2021
 
 pi1 <- 10 / p
-posit_types <- c("random", "random", "fix", "random")
+posit_types <- c("random", "random", "fix", "random", "random")
 beta_permute <- NULL
 noise <- quote(rnorm(n))
 

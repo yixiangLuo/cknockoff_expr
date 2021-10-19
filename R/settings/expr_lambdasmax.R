@@ -9,9 +9,9 @@ library(KernSmooth)  # local linear regression
 source(here("R", "methods.R"))
 
 
-experiment <- "main_expr_smallScale"
+experiment <- "expr_lambdasmax"
 
-p <- 100
+p <- 300
 n <- 3*p
 X_types <- c("IID_Normal", "MCC", "Homo_Block", "Coef_AR", "X_AR")
 X_seed <- 2021
@@ -25,11 +25,11 @@ target <- 0.5
 target_at_alpha <- 0.2
 alphas <- c(0.05, 0.1, 0.2, 0.3)
 
-sample_size <- 100
-n_cores <- 7
+sample_size <- 400
+n_cores <- 31
 
 knockoffs <- create.fixed
-statistic <- stat.glmnet_coefdiff_lm
+statistic <- stat.glmnet_lambdasmax_lm
 
 get_method_list <- get_multi_method_list
 method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_L_0d8_R_")

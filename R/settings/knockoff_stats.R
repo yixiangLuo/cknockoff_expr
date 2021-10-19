@@ -11,7 +11,7 @@ experiment <- "knockoff_stats"
 
 p <- 300
 n <- 3*(p+1)
-X_types <- c("IID_Normal", "MCC", "Homo_Block", "Coef_AR")
+X_types <- c("IID_Normal", "MCC", "Homo_Block", "Coef_AR", "X_AR")
 X_seed <- 2021
 
 pi1 <- 10 / p

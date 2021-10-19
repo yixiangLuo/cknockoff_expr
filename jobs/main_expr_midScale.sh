@@ -7,3 +7,4 @@
 #SBATCH --mail-type=ALL
 
 Rscript ../R/do_expr.R main_expr_midScale.R
+Rscript ../R/do_expr.R expr_lambdasmax.R

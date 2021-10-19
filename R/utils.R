@@ -18,11 +18,10 @@ gene_X <- function(X_type = "IID_Normal", n, p, X_seed = 1){
         R <- chol(cov_mat)
         basis <- qr.Q(qr(matrix(rnorm(n*p), n)))
         X <- basis %*% R
-    } else if(X_type == "Coef_AR_Block"){
+    } else if(X_type == "X_AR"){
         rho <- 0.5
-        block_size <- 10
         
-        cov_mat <- solve(diag(p / block_size) %x% rho^(abs(outer(1:block_size, 1:block_size, "-"))))
+        cov_mat <- rho^(abs(outer(1:p, 1:p, "-")))
         
         R <- chol(cov_mat)
         basis <- qr.Q(qr(matrix(rnorm(n*p), n)))
