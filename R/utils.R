@@ -54,10 +54,60 @@ gene_X <- function(X_type = "IID_Normal", n, p, X_seed = 1){
             basis <- qr.Q(qr(matrix(rnorm(n*p), n)))
             X <- basis %*% R
         }
+    } else if(X_type == "MCC_Block"){
+        block_size <- 5
+        
+        blockSigma <- matrix(-1/block_size, block_size, block_size)
+        diag(blockSigma) <- 1
+        
+        cov_mat <- as.matrix(diag(p / block_size) %x% blockSigma)
+        
+        R <- chol(cov_mat)
+        basis <- qr.Q(qr(matrix(rnorm(n*p), n)))
+        X <- basis %*% R
+    } else if(X_type == "Sparse"){
+        X <- diag(1, nrow = n, ncol = p)
+        nonzeros <- matrix(NA, nrow = p, ncol = 2)
+        nonzeros[, 1] <- 1:p
+        nonzeros[, 2] <- sample(1:p, p, replace = T)
+        X[nonzeros] <- X[nonzeros] + 0.5
     }
     # X <- scale(X, center = FALSE, scale = sqrt(colSums(X^2)))
 
     return(X)
+}
+
+corr_noise <- function(n, rho){
+    cov_mat <- matrix(0, n, n)
+    cov_mat[abs(row(cov_mat) - col(cov_mat)) <= 1] <- -rho * 0.5
+    diag(cov_mat) <- 1
+    
+    R <- chol(cov_mat)
+    noise <- t(R) %*% matrix(rnorm(n), nrow = n)
+    
+    return(noise)
+}
+
+makeup_vectors <- function(...){
+    vars <- list(...)
+    max_length <- max(sapply(vars, length))
+    
+    env <- parent.frame()
+    for(var_i in 1:length(vars)){
+        var_name <- names(vars[var_i])
+        var_length <- length(vars[[var_i]])
+        
+        if(var_length < max_length){
+            var_list <- list()
+            for(i in 1:max_length) var_list <- c(var_list, vars[[var_i]])
+            
+            env[[var_name]] <- var_list
+        } else{
+            env[[var_name]] <- as.list(vars[[var_i]])
+        }
+    }
+    
+    invisible()
 }
 
 
@@ -278,5 +328,6 @@ parse_name <- function(str){
     str <- str_replace(str, "_L_", "(")
     str <- str_replace(str, "_R_", ")")
     str <- str_replace(str, "_D_", "-")
+    str <- str_replace(str, "_STAR", "*")
 }
 

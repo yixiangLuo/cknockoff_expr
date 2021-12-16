@@ -5,91 +5,13 @@ library(latex2exp)
 
 source(here("R", "utils.R"))
 
-# fdp and power of the methods
-draw_fdp_power <- function(file_name, alpha = 0.2, sample_size = 1,
-                           y_lim = NULL, excepts = NULL,
-                           ref_colors = c("dodgerblue3", "orange1"),
-                           Refadj = F){
-
-    if(Refadj){
-        location <- str_locate(file_name, "fdp_power")
-        file_name <- insert_to_str(file_name, location[2], "_Refadj")
-    }
-
-    fdp_power <- read.csv(paste(file_name, ".csv", sep = "")) %>%
-        mutate(methods = factor(methods))
-
-    if(!is.null(excepts)){
-        # excepts <- sapply(excepts, function(str){paste0(str, "-")})
-        # excepts <- paste0(excepts, collapse = "|")
-        fdp_power <- fdp_power %>% filter(!grepl(excepts, method_name))
-    }
-
-    way_weight_names <- filter(fdp_power, grepl("-", method_name))$method_name %>% unique()
-    way_num <- sub("-.*", "", way_weight_names) %>% unique() %>% length()
-    weight_scheme_num <- length(way_weight_names) / max(way_num, 1)
-
-    methods_level <- filter(fdp_power, type == unique(fdp_power$type)[1])$methods
-    methods_name <- filter(fdp_power, type == unique(fdp_power$type)[1])$method_name
-
-    color_types <- c("indianred", "lightblue", "lightgoldenrod", "mediumpurple", "palegreen")
-    colors <- ref_colors
-    if(weight_scheme_num > 0){
-        for(scheme_i in 1:weight_scheme_num){
-            for(way_i in 1:way_num){
-                colors <- c(colors, paste0(color_types[scheme_i], way_i))
-            }
-        }
-    }
-
-    max_ref_power <- fdp_power %>% filter(type == "Power", as.numeric(methods) < 3)
-    max_ref_power <- max(max_ref_power$mean)
-    reference <- data.frame(type = unique(fdp_power$type), value = c(alpha, max_ref_power))
-
-    if(is.null(y_lim)){
-        y_lim <- fdp_power %>% filter(type == "Power")
-        y_lim <- max(y_lim$mean)
-        y_lim <- max(0.7, ceiling(y_lim * 10) / 10)
-    }
-
-    if(length(methods_level) > 7){
-        facet_row <- vars(type)
-        facet_col <- NULL
-    } else{
-        facet_row <- NULL
-        facet_col <- vars(type)
-    }
-
-    ggplot(fdp_power) +
-        geom_bar(aes(x=methods, y=mean, fill = methods), stat="identity") +
-        geom_errorbar(aes(x=methods, y=mean,
-                          ymin=mean-2*std/sqrt(sample_size),
-                          ymax=mean+2*std/sqrt(sample_size)), width=0.2) +
-        geom_hline(data = reference, aes(yintercept = value),
-                   linetype = "longdash", alpha = 0.6) +
-        facet_grid(facet_row, facet_col) +
-        scale_x_discrete(breaks = methods_level, labels = methods_name) +
-        scale_y_continuous(breaks = seq(0, 1, length.out = 6)) +
-        scale_fill_manual(values = colors) +
-        theme_bw() +
-        ylim(0, y_lim) +
-        theme(panel.grid = element_blank(),
-              axis.text.x = element_text(angle = 60),
-              strip.text = element_text(size = 17.5),
-              axis.text = element_text(size = 12.5),
-              axis.title = element_text(size = 17.5),
-              legend.position = "none",
-              axis.title.x=element_blank(),
-              axis.title.y=element_blank())
-
-    # ggsave(file=paste(file_name, ".eps", sep = ""), width = NA, height = 10, units = "cm")
-}
 
 # fdp and power of the methods
 draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
                                  method_names, method_colors, method_shapes,
                                  error_bar = F, direction = F){
     load(here("data", paste0(experiment, ".Rdata")))
+    
     fdr_power <- lapply(X_types, function(X_type){
         results[[X_type]]$FDR_Power %>% mutate(design_mat = str_replace(X_type, "_", "-"))
     })
@@ -98,18 +20,20 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
     rm(results)
     
     dir <- direction
-    fdr_power <- fdr_power %>% filter(direction == dir,
-                                      design_mat %in% X_types,
-                                      method_name %in% method_names)
+    fdr_power <- fdr_power %>% 
+        filter(direction == dir,
+               design_mat %in% X_types,
+               method_name %in% method_names) %>%
+        arrange(methods)
 
     methods_level <- unique(fdr_power$methods)
-    alphas <- unique(fdr_power$alpha)
+    # alphas <- unique(fdr_power$alpha)
 
     method_names <- parse_name(method_names)
 
-    ref_prototype <- data.frame(alpha = c(alphas, alphas),
-                                threshold = c(alphas, rep(NA, length(alphas))),
-                                type = rep(c("FDR", "Power"), each = length(alphas)))
+    ref_prototype <- data.frame(fig_x = c(fig_x_var$value, fig_x_var$value),
+                                threshold = c(unlist(alphas), rep(NA, length(fig_x_var$value))),
+                                type = rep(c("FDR", "Power"), each = length(fig_x_var$value)))
     reference <- lapply(X_types, function(X_type){
         ref_prototype %>% mutate(design_mat = X_type)
     })
@@ -117,7 +41,7 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
     
     if(error_bar){
         add_error_bar <- quote(
-            geom_errorbar(aes(x = alpha, y = mean,
+            geom_errorbar(aes(x = fig_x, y = mean,
                               ymin = mean-2*std/sqrt(sample_size),
                               ymax = mean+2*std/sqrt(sample_size),
                               color = methods), width=0.05,
@@ -126,16 +50,24 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
     } else{
         add_error_bar <- NULL
     }
+    
+    if(fig_x_var$value[1] <= fig_x_var$value[length(fig_x_var$value)]){
+        set_x_axis <- scale_x_continuous
+    } else{
+        set_x_axis <- scale_x_reverse
+    }
 
     plot <- ggplot(fdr_power) +
-        geom_line(aes(x = alpha, y = mean, color = methods)) +
-        geom_point(aes(x = alpha, y = mean, color = methods, shape = methods), size = 2) +
+        geom_line(aes(x = fig_x, y = mean, color = methods)) +
+        geom_point(aes(x = fig_x, y = mean, color = methods, shape = methods), size = 2) +
         eval(add_error_bar) +
-        geom_line(data = reference, aes(x = alpha, y = threshold),
+        geom_line(data = reference, aes(x = fig_x, y = threshold),
                   linetype = "longdash", alpha = 0.6, na.rm = T) +
         facet_grid(vars(factor(design_mat, levels = X_types)),
-                   vars(factor(type, levels = c("FDR", "Power")))) +
-        scale_x_continuous(breaks = alphas, labels = alphas) +
+                   vars(factor(type, levels = c("FDR", "Power"))), scales="free") +
+        # facet_wrap(vars(factor(design_mat, levels = X_types), factor(type, levels = c("FDR", "Power"))),
+        #            ncol = 2, scales="free_y") +
+        set_x_axis(breaks = fig_x_var$value, labels = fig_x_var$value) +
         scale_color_manual(values = method_colors, labels = method_names, breaks = methods_level) +
         scale_shape_manual(values = method_shapes, labels = method_names, breaks = methods_level) +
         theme_bw() +
@@ -147,10 +79,10 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
               legend.position = "right",
               legend.title=element_text(size=9),
               legend.text=element_text(size=9)) +
-        labs(x = "Nominated FDR level", y = "Estimated FDR/Power")
+        labs(x = fig_x_var$name, y = "Estimated FDR/Power")
 
     ggsave(filename = here("figs", paste0("simu-", experiment, ".pdf")),
-           plot, width = 7, height = 10)
+           plot, width = 7, height = 2*(length(X_types)+1))
     
     return(plot)
 }
@@ -210,6 +142,53 @@ draw_runtime_curve <- function(experiment, X_types){
            plot, width = 6, height = 5)
     
     return(plot)
+}
+
+draw_kn_conservative <- function(experiment){
+    load(here("data", paste0(experiment, ".Rdata")))
+    
+    quant_names <- rownames(results)[1:(NROW(results)-1)]
+    quant_colors <- c("#a6bddb", "#fc8d59", "#2b8cbe", "#d95f0e", "#045a8d", "#333333",
+                      "#2b8cbe", "#045a8d", "#333333")
+    quant_labels <- unname(TeX(c("$M_0 \\alpha$", "$M_{\\tau} \\alpha$", "$b \\, (H_{0})$", "$M_{\\tau_{0}} \\alpha$", "$b^0 \\, (H_{0})$", "FDR",
+                                 "$b \\, (H_{1})$", "$b^0 \\, (H_{1})$", "TDR")))
+    solid <- c(0, 0, 1, 0, 0, 0)
+    
+    quant_to_show <- list(c("M_0", "M_tau0", "b0_F", "FDR", "alpha"),
+                          c("M_0", "M_tau", "b_F", "M_tau0", "b0_F", "FDR", "alpha"),
+                          c("b_T", "b0_T", "TDR", "alpha"))
+    figure_appendix <- c("init", "full", "power")
+    
+    for(fig_i in 1:length(figure_appendix)){
+        kn.conservative <- data.frame(t(results)) %>%
+            # mutate(M_0 = pmin(M_0, 1), M_tau = pmin(M_tau, M_0)) %>%
+            select(all_of(quant_to_show[[fig_i]])) %>%
+            gather(quantity, value, -alpha) %>%
+            mutate(quantity = factor(quantity, levels = quant_names, ordered = T))
+        
+        
+        plot <- ggplot(kn.conservative) +
+            geom_ribbon(aes(x = alpha, ymax = value, fill = quantity), ymin = 0, alpha = 1) +
+            geom_line(aes(x = alpha, y = value, color = quantity, alpha = quantity)) +
+            scale_color_manual(values = quant_colors, labels = quant_labels, breaks = quant_names) +
+            scale_fill_manual(values = quant_colors, labels = quant_labels, breaks = quant_names) +
+            scale_alpha_manual(values = solid, labels = quant_labels, breaks = quant_names) +
+            theme_light() +
+            theme(aspect.ratio = 1,
+                  panel.grid = element_blank(),
+                  axis.title = element_text(size = 8),
+                  axis.text = element_text(size = 6),
+                  legend.position = "right",
+                  legend.title = element_text(size=8),
+                  legend.text = element_text(size=7),
+                  legend.key.size = unit(0.5, 'cm')) +
+            labs(x = TeX("$nominal \\, FDR \\, level: \\, \\alpha$"), y = TeX("$value / \\alpha$"))
+        
+        ggsave(filename = here("figs", paste0("kn_conservative-", figure_appendix[fig_i], ".pdf")),
+               plot, width = 4, height = 3)
+    }
+    
+    invisible()
 }
 
 

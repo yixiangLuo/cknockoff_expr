@@ -1,0 +1,50 @@
+```{r setup, echo = FALSE, message=FALSE, warning=FALSE}
+library(here)
+
+# source(here("R", "experiment.R"))
+source(here("R", "methods.R"))
+source(here("R", "utils.R"))
+source(here("R", "plot.R"))
+```
+
+
+```{r fig.height=7}
+experiment <- "test-Rhat_guess"
+sample_size <- 100
+
+X_types <- c("IID_Normal", "MCC", "Homo_Block")
+method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff_PLUS") #, "cKnockoff_L_0d8_R_"
+
+method_colors <- unname(multi_method_color[method_names])
+method_shapes <- unname(multi_method_shape[method_names])
+
+draw_fdp_power_curve(experiment, X_types, sample_size,
+                     method_names, method_colors, method_shapes,
+                     error_bar = F, direction = F)
+
+
+experiment <- "test"
+sample_size <- 100
+
+X_types <- c("IID_Normal", "MCC", "Homo_Block")
+method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff_PLUS")
+
+method_colors <- unname(multi_method_color[method_names])
+method_shapes <- unname(multi_method_shape[method_names])
+
+draw_fdp_power_curve(experiment, X_types, sample_size,
+                     method_names, method_colors, method_shapes,
+                     error_bar = F, direction = F)
+```
+
+
+
+
+
+
+
+
+
+
+
+

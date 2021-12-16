@@ -34,31 +34,39 @@ results <- lapply(1:length(X_types), function(iter_i){
   
   X <- gene_X(X_type, n, p, X_seed)
   
-  mu1 <- BH_lm_calib(X, pi1, noise, posit_type, 1, side = "two", nreps = 200,
+  mu1 <- BH_lm_calib(X, pi1, noise = quote(rnorm(n)),
+                     posit_type, 1, side = "two", nreps = 200,
                      alpha = target_at_alpha, target = target, n_cores = n_cores)
   beta <- genmu(p, pi1, mu1, posit_type, 1)
   
   H0 <- beta == 0
-  eval(beta_permute)
   
   method_list <- get_method_list(X, knockoffs, statistic)[method_names]
   
-  result <- get_fdp_power(X, beta, H0, noise, alphas, method_list,
+  result <- get_fdp_power(X, beta, H0, mu1, beta_permutes, noises, alphas,
+                          fig_x_var, method_list,
                           sample_size, n_cores,
                           experiment, X_title)
   
-  save(result, file = here("data", "temp", paste0(experiment, "-", X_type, ".Rdata")))
+  save(result, alphas, fig_x_var,
+       file = here("data", "temp", paste0(experiment, "-", X_type, ".Rdata")))
   
   return(result)
 })
 
 names(results) <- X_types
 
-save(results, file = here("data", paste0(experiment, ".Rdata")))
+save(results, alphas, fig_x_var, file = here("data", paste0(experiment, ".Rdata")))
 for(X_type in X_types){
   file.remove(here("data", "temp", paste0(experiment, "-", X_type, ".Rdata")))
 }
 
+# method_names <- c("BH", "dBH", "knockoff", "BonBH")
+# method_colors <- unname(multi_method_color[method_names])
+# method_shapes <- unname(multi_method_shape[method_names])
+# method_shapes <- rep(19, 4)
+
+# X_types <- c("IID_Normal", "MCC", "Homo_Block")
 draw_fdp_power_curve(experiment, X_types, sample_size,
                      method_names, method_colors, method_shapes,
                      error_bar = F, direction = F)
