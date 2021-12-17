@@ -49,7 +49,7 @@ target <- 0.5
 target_at_alpha <- 0.2
 
 sample_size <- 100
-n_cores <- 7
+n_cores <- 15
 
 knockoffs <- create.fixed
 statistic <- stat.glmnet_coefdiff_lm

@@ -1,0 +1,26 @@
+library(here)
+
+experiments <- list.dirs(path = here("data", "temp"), full.names = F, recursive = F)
+
+for(experiment in experiments){
+    source(here("R", "settings", paste0(experiment, ".R")))
+    expr_num <- length(X_types) * length(fig_x_var$value) * sample_size
+    
+    complete_num <- length(list.files(path = here("data", "temp", experiment),
+                                      pattern="^\\d+?\\.Rdata$"))
+    running_num <- length(list.files(path = here("data", "temp", experiment, "progress"),
+                                     pattern="^\\d+?$"))
+    
+    status <- paste0(experiment, ": ", complete_num, "/", expr_num, " completed")
+    if(complete_num != expr_num){
+        status <- paste0(status, ", ", running_num, "are running.")
+    }
+    
+    print(status)
+}
+
+
+
+
+
+

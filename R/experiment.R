@@ -1,91 +1,66 @@
-library(abind)    # abind
+library(here)
 
-library(foreach)
-library(doParallel)
+# read cmd args
+args <- commandArgs(trailingOnly=TRUE)
+if (length(args) == 2) {
+  experiment <- args[1]
+  job_id <- as.integer(args[2])
+} else {
+  stop("accept two paramters: expr_name and job id.")
+}
 
+# experiment <- "test"
+# job_id <- 1
 
-# compute fdr and power for methods on a linear problem
-get_fdp_power <- function(X, beta, H0, mu1, beta_permutes = NA,
-                          noises = quote(rnorm(n)), alphas,
-                          fig_x_var, method_list,
-                          sample_size = 100, n_cores,
-                          expr_name, X_title){
-    n <- NROW(X)
-    p <- NCOL(X)
+# load packages and data
+source(here("R", "settings", paste0(experiment, ".R")))
+load(here("data", "temp", experiment, "settings.Rdata"))
 
-    registerDoParallel(n_cores)
+# the indeces of experiments this job should do
+job_expr_indeces <- get_data_indeces(job_id, index_data)
 
-    org_data <- list()
-    FDR_Power <- NULL
-
-    for(var_i in 1:length(fig_x_var$value)){
-        fig_x_value <- fig_x_var$value[var_i]
-        alpha <- alphas[[var_i]]
-        beta_permute <- beta_permutes[[var_i]]
-        noise <- noises[[var_i]]
-        
-        eval(beta_permute)
-
-        update_progress(expr_name, X_title, alpha, sample_size, action = "start")
-
-        results <- foreach(iter = 1:sample_size, .options.multicore = list(preschedule = F)) %dopar% {
-        # results <- lapply(1:sample_size, function(iter){
-            # print(iter)
-
-            set.seed(iter)
-
-            y <- X %*% beta + eval(noise)
-            # save(X, y, alpha, file = "debug.RData")
-
-            sign_beta <- sign(beta)
-
-            fdp_power <- NULL
-            method_names <- NULL
-
-            for(method_i in 1:length(method_list)){
-                # print(names(method_list[method_i]))
-                method_res <- method_list[[method_i]](y, X, alpha)
-                method_fdp_power <- calc_FDP_power(method_res$selected, H0,
-                                                   method_res$sign_predict, sign_beta)
-                fdp_power <- cbind(fdp_power, method_fdp_power)
-                method_names <- c(method_names, names(method_list[method_i]))
-            }
-            print(iter)
-
-            colnames(fdp_power) <- method_names
-
-            update_progress(expr_name, X_title, alpha, sample_size, action = "progress")
-
-            return(fdp_power)
+# release memory of unused data
+for(X_iter in 1:index_data$X_len){
+  if(!(X_iter %in% sapply(job_expr_indeces, function(ind){ind$X_index}))){
+    X_data[[X_iter]] <- NA
+    y_data[[X_iter]] <- NA
+  } else{
+    for(var_i in 1:index_data$fig_x_len){
+      if(!(var_i %in% sapply(job_expr_indeces, function(ind){ind$fig_x_index}))){
+        y_data[[X_iter]][[var_i]] <- NA
+      } else{
+        for(iter in 1:index_data$sample_len){
+          if(!(iter %in% sapply(job_expr_indeces, function(ind){ind$y_index}))){
+            y_data[[X_iter]][[var_i]]$data[[iter]] <- NA
+          }
         }
-
-        update_progress(expr_name, X_title, alpha, sample_size, action = "end")
-
-        method_names <- colnames(results[[1]])
-        results <- abind(results, along=3)
-
-        org_data[[var_i]] <- results
-
-        interp_results <- function(results, method_names, type, alpha, direction){
-            results <- unname(results)
-            interpretation <- data.frame(methods = factor(1:NROW(results), ordered = T),
-                                         method_name = method_names,
-                                         mean = rowMeans(results),
-                                         std = sqrt(rowMeans((results - rowMeans(results))^2)),
-                                         type = type,
-                                         direction = direction,
-                                         alpha = alpha,
-                                         fig_x = fig_x_value)
-        }
-
-        fdr_power <- rbind(interp_results(results[1, , ], method_names, "FDR", alpha, direction = F),
-                           interp_results(results[2, , ], method_names, "Power", alpha, direction = F),
-                           interp_results(results[3, , ], method_names, "FDR", alpha, direction = T),
-                           interp_results(results[4, , ], method_names, "Power", alpha, direction = T))
-        FDR_Power <- rbind(FDR_Power, fdr_power)
+      }
     }
+  }
+}
 
-    return(list(FDR_Power = FDR_Power, org_data = org_data))
+# do the experiments
+for(expr_index in job_expr_indeces){
+  # record the start of the program
+  cat(as.integer(Sys.time()),
+      file = here("data", "temp", experiment, "progress", expr_index$expr_id))
+  
+  X <- X_data[[expr_index$X_index]]$X
+  method_list <- X_data[[expr_index$X_index]]$method_list
+  
+  alpha <- y_data[[expr_index$X_index]][[expr_index$fig_x_index]]$alpha
+  y <- y_data[[expr_index$X_index]][[expr_index$fig_x_index]]$data[[expr_index$y_index]]$y
+  
+  expr_result <- lapply(method_list, function(method){
+    method(y, X, alpha)
+  })
+  
+  # save results
+  save(expr_result,
+       file = here("data", "temp", experiment, paste0(expr_index$expr_id, ".Rdata")))
+  
+  # delete the "in-progress" record
+  unlink(here("data", "temp", experiment, "progress", expr_index$expr_id))
 }
 
 
