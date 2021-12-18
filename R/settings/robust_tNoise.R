@@ -11,22 +11,25 @@ source(here("R", "utils.R"))
 source(here("R", "methods.R"))
 
 
-experiment <- "main_expr_largeScale"
+experiment <- "robust_tNoise"
 
-p <- 1000
+p <- 300
 n <- 3*p
 
 X_seed <- 2021
 pi1 <- 10 / p
 
-X_types <- c("IID_Normal", "MCC", "MCC_Block", "Coef_AR", "X_AR")
-posit_types <- rep("random", length(X_types)) # , "random", "fix"
+X_types <- c("IID_Normal", "MCC", "MCC_Block", "Sparse")
+posit_types <- rep("random", length(X_types))
 
-alphas <- c(0.01, 0.05, 0.1, 0.2)
+alphas <- c(0.2)
 beta_permutes <- NA
-noises <- c(quote(rnorm(n)))
+noises <- c(quote(rt(n, df = 9)),
+            quote(rt(n, df = 7)),
+            quote(rt(n, df = 5)),
+            quote(rt(n, df = 3)))
 
-fig_x_var <- list(name = "nominal FDR level", value = c(0.01, 0.05, 0.1, 0.2))
+fig_x_var <- list(name = "degree of freedom of t-noise", value = c(9, 7, 5, 3))
 makeup_vectors(alphas = alphas, beta_permutes = beta_permutes, noises = noises)
 
 target <- 0.5

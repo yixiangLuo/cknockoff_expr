@@ -13,13 +13,13 @@ source(here("R", "methods.R"))
 
 experiment <- "test"
 
-p <- 100
+p <- 20
 n <- 3*p
 
 X_seed <- 2021
 pi1 <- 10 / p
 
-X_types <- c("IID_Normal", "MCC", "MCC_Block") # "IID_Normal", "MCC", "MCC_Block", "Sparse"
+X_types <- c("IID_Normal", "MCC") # "IID_Normal", "MCC", "MCC_Block", "Sparse"
 posit_types <- rep("random", length(X_types)) # , "random", "fix"
 
 # alphas <- c(0.2)
@@ -48,8 +48,8 @@ makeup_vectors(alphas = alphas, beta_permutes = beta_permutes, noises = noises)
 target <- 0.5
 target_at_alpha <- 0.2
 
-sample_size <- 100
-n_cores <- 15
+sample_size <- 10
+n_cores <- 14
 
 knockoffs <- create.fixed
 statistic <- stat.glmnet_coefdiff_lm
