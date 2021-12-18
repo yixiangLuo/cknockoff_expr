@@ -59,13 +59,14 @@ names(y_data) <- X_types
 
 index_data <- list(X_len = length(X_types), fig_x_len = length(fig_x_var$value),
                    sample_len = sample_size, n_jobs = n_jobs)
-
+expr_num <- length(X_types) * length(fig_x_var$value) * sample_size
 
 unlink(here("data", "temp", experiment), recursive = TRUE) 
 dir.create(here("data", "temp", experiment), showWarnings = F)
 dir.create(here("data", "temp", experiment, "progress"), showWarnings = F)
 save(X_data, y_data, index_data,
      file = here("data", "temp", experiment, "settings.Rdata"))
+save(expr_num, file = here("data", "temp", experiment, "expr_num.Rdata"))
 
 unlink(here("log", experiment), recursive = TRUE) 
 dir.create(here("log", experiment), showWarnings = F)
