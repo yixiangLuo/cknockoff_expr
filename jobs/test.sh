@@ -6,4 +6,4 @@
 #SBATCH --mail-user=yixiangluo@berkeley.edu
 #SBATCH --mail-type=ALL
 
-Rscript ../R/do_expr.R test.R
+Rscript ../R/do_expr.R test
