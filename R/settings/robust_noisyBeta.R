@@ -11,22 +11,25 @@ source(here("R", "utils.R"))
 source(here("R", "methods.R"))
 
 
-experiment <- "main_expr_largeScale"
+experiment <- "robust_noisyBeta"
 
-p <- 1000
+p <- 300
 n <- 3*p
 
 X_seed <- 2021
 pi1 <- 10 / p
 
-X_types <- c("IID_Normal", "MCC", "MCC_Block", "Coef_AR", "X_AR")
-posit_types <- rep("random", length(X_types)) # , "random", "fix"
+X_types <- c("IID_Normal", "MCC", "MCC_Block")
+posit_types <- rep("random", length(X_types))
 
-alphas <- c(0.01, 0.05, 0.1, 0.2)
-beta_permutes <- NA
+alphas <- c(0.2)
+beta_permutes <- c(quote(beta[H0] <- runif(sum(H0), min = -0*mu1, max = 0*mu1)),
+                   quote(beta[H0] <- runif(sum(H0), min = -0.1*mu1, max = 0.1*mu1)),
+                   quote(beta[H0] <- runif(sum(H0), min = -0.2*mu1, max = 0.2*mu1)),
+                   quote(beta[H0] <- runif(sum(H0), min = -0.3*mu1, max = 0.3*mu1)))
 noises <- c(quote(rnorm(n)))
 
-fig_x_var <- list(name = "nominal FDR level", value = c(0.01, 0.05, 0.1, 0.2))
+fig_x_var <- list(name = "maximal noise magnitude / mu1", value = c(0, 0.1, 0.2, 0.3))
 makeup_vectors(alphas = alphas, beta_permutes = beta_permutes, noises = noises)
 
 target <- 0.5

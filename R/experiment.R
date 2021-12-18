@@ -23,8 +23,6 @@ get_fdp_power <- function(X, beta, H0, mu1, beta_permutes = NA,
         alpha <- alphas[[var_i]]
         beta_permute <- beta_permutes[[var_i]]
         noise <- noises[[var_i]]
-        
-        eval(beta_permute)
 
         update_progress(expr_name, X_title, alpha, sample_size, action = "start")
 
@@ -33,6 +31,8 @@ get_fdp_power <- function(X, beta, H0, mu1, beta_permutes = NA,
             # print(iter)
 
             set.seed(iter)
+          
+            eval(beta_permute)
 
             y <- X %*% beta + eval(noise)
             # save(X, y, alpha, file = "debug.RData")

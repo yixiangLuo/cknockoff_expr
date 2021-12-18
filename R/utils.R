@@ -66,11 +66,10 @@ gene_X <- function(X_type = "IID_Normal", n, p, X_seed = 1){
         basis <- qr.Q(qr(matrix(rnorm(n*p), n)))
         X <- basis %*% R
     } else if(X_type == "Sparse"){
+        sparsity <- 0.01
         X <- diag(1, nrow = n, ncol = p)
-        nonzeros <- matrix(NA, nrow = p, ncol = 2)
-        nonzeros[, 1] <- 1:p
-        nonzeros[, 2] <- sample(1:p, p, replace = T)
-        X[nonzeros] <- X[nonzeros] + 0.5
+        lower_tri <- lower.tri(X)
+        X[lower_tri] <- replicate(sum(lower_tri), rbinom(1, 1, sparsity))
     }
     # X <- scale(X, center = FALSE, scale = sqrt(colSums(X^2)))
 

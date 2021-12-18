@@ -17,7 +17,7 @@ args <- commandArgs(trailingOnly=TRUE)
 if (length(args) > 1) {
   stop("One and only one experiment at a time.")
 } else if (length(args) == 1) {
-  source(here("R", "settings", args[1]))
+  source(here("R", "settings", paste0(args[1], ".R")))
 }
 
 file_name <- here("data", "temp", paste0("progress-", experiment, ".txt"))
