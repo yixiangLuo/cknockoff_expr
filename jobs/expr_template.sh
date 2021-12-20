@@ -14,6 +14,9 @@
 EXPERIMENT=expr
 
 # run experiments
+
+ml R
+
 Rscript ../R/experiment.R $EXPERIMENT $SLURM_ARRAY_TASK_ID
 
 
