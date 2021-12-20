@@ -1,5 +1,7 @@
 #!/bin/bash
 
+ml R
+
 Rscript ../R/post_process.R main_expr_largeScale 
 
 Rscript ../R/post_process.R lambdasmax_stat  
