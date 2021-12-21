@@ -1,6 +1,6 @@
 #!/bin/bash
 
-N_JOBS=800
+N_JOBS=400
 
 sh do_expr.sh main_expr_largeScale $N_JOBS
 

@@ -2,7 +2,7 @@
 
 #SBATCH --job-name=expr
 #SBATCH --output=../log/robust_tNoise/%a.out
-#SBATCH --array=1-800
+#SBATCH --array=1-400
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --nodes=1
