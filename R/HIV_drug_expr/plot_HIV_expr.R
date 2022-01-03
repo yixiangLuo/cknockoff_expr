@@ -8,9 +8,15 @@ source(here("R", "utils.R"))
 
 load(here("data", "HIV", "HIV_discoveries.RData"))
 
-methods_levels <- c("BH", "dBH", "knockoff", "cKnockoff", "cKnockoff_L_0d8_R_")
-methods_labels <- parse_name(c("BH", "dBH", "KN", "cKN", "cKN_L_0d8_R_"))
+# methods_levels <- c("BH", "dBH", "knockoff", "cKnockoff", "cKnockoff_STAR")
+# methods_labels <- parse_name(c("BH", "dBH", "KN", "cKN", "cKN_STAR"))
+methods_levels <- c("BH", "knockoff", "cKnockoff", "cKnockoff_STAR")
+methods_labels <- parse_name(c("BH", "KN", "cKN", "cKN_STAR"))
 names(methods_labels) <- methods_levels
+
+multi_method_color <- c("#984ea3", "dodgerblue3", "#333333", "#33a02c", "red", "orange1")
+names(multi_method_color) <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
+method_colors <- multi_method_color[methods_levels]
 
 for (al in unique(discoveries$alpha)){
   data <- discoveries %>%
@@ -30,10 +36,12 @@ for (al in unique(discoveries$alpha)){
       drug = factor(drug,
                     levels = drug_levels)) %>%
     ggplot(aes(x = method, y = value)) +
-    geom_bar(stat = "identity", aes(fill = discoveries)) +
+    geom_bar(stat = "identity", aes(color = method, fill = method, alpha = discoveries)) +
     facet_wrap(~ drug, nrow = 4) +
     scale_x_discrete(labels = methods_labels) +
-    scale_fill_manual(values = c("orangered3", "navyblue")) +
+    scale_fill_manual(values = method_colors) +
+    scale_colour_manual(values = method_colors) +
+    guides(fill = "none", color = "none") +
     ylab("Number of discoveries") + 
     theme_bw() +
     theme(panel.grid = element_blank(),

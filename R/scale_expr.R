@@ -4,6 +4,9 @@ library(tidyverse)
 library(knockoff)
 library(cknockoff)
 
+library(foreach)
+library(doParallel)
+
 source(here("R", "methods.R"))
 source(here("R", "utils.R"))
 source(here("R", "plot.R"))
@@ -13,20 +16,21 @@ experiment <- "scale_expr"
 
 X_types <- c("IID_Normal", "MCC")
 alpha <- 0.05
-p_vec <- c(100, 200, 500, 1000, 2000)
+p_vec <- c(100, 200, 500, 1000)
+# p_vec <- c(20, 30)
 pi1_list <- list(fixed_alt = 10 / p_vec, fixed_ratio = rep(0.1, length(p_vec)))
-n_rounds <- c(10, 10, 5, 1, 1)
+n_rounds <- rep(7, length(p_vec))  # 7 physical cores used
 
 target <- 0.5
 target_at_alpha <- 0.2
 
-n_cores <- 7
+n_cores <- 14
 
 X_seed <- 2021
 noise <- quote(rnorm(n))
 
-knockoffs.name <- quote(create.fixed)
-statistic.name <- quote(stat.glmnet_coefdiff_lm)
+knockoffs.name <- "create.fixed"
+statistic.name <- "stat.glmnet_coefdiff_lm"
 
 knockoffs <- get(knockoffs.name)
 statistic <- get(statistic.name)
@@ -34,7 +38,7 @@ statistic <- get(statistic.name)
 runtime.result <- lapply(X_types, function(X_type){
   print(X_type)
   
-  posit_type <- ifelse(X_type != "Homo_Block", "random", "fix")
+  posit_type <- "fix"
   
   lapply(pi1_list, function(pi1_vec){
     print(pi1_vec)
@@ -58,7 +62,10 @@ runtime.result <- lapply(X_types, function(X_type){
       
       print(paste0(c("alt:", which(!H0)), collapse = " "))
       
-      runtime <- sapply(1:n_round, function(iter){
+      registerDoParallel(n_round)
+      
+      runtime <- foreach(iter = 1:n_round) %dopar% {
+      # runtime <- sapply(1:n_round, function(iter){
         
         y <- X %*% beta + eval(noise)
         
@@ -73,20 +80,32 @@ runtime.result <- lapply(X_types, function(X_type){
         ckn.result <- cknockoff(X, y,
                                 statistic = statistic,
                                 alpha = alpha,
-                                kappa = 1,
-                                n_cores = 1)
+                                n_cores = 1,
+                                Rhat_refine = F)
         time_end <- Sys.time()
         
         ckn.runtime <- difftime(time_end, time_start, units = "secs")[[1]]
         
+        time_start <- Sys.time()
+        ckn_star.result <- cknockoff(X, y,
+                                     statistic = statistic,
+                                     alpha = alpha,
+                                     n_cores = 1,
+                                     Rhat_refine = T)
+        time_end <- Sys.time()
+        
+        ckn_star.runtime <- difftime(time_end, time_start, units = "secs")[[1]]
+        
         print(paste0(c("kn:", kn.result$selected), collapse = " "))
         print(paste0(c("ckn:", ckn.result$selected), collapse = " "))
+        print(paste0(c("ckn*:", ckn_star.result$selected), collapse = " "))
         
-        runtime_sample <- c(kn.runtime, ckn.runtime)
-        names(runtime_sample) <- c("knockoff", "cKnockoff")
+        runtime_sample <- c(kn.runtime, ckn.runtime, ckn_star.runtime)
+        names(runtime_sample) <- c("knockoff", "cKnockoff", "cKnockoff_STAR")
         
         return(runtime_sample)
-      })
+      }
+      runtime <- do.call(cbind, runtime)
       runtime_avg <- rowMeans(runtime)
       
       return(runtime_avg)

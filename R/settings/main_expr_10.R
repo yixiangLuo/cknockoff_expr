@@ -1,13 +1,17 @@
+library(here)
+
+library(dbh)
 library(knockoff)
 library(cknockoff)
 
-library(glmnet)
+library(glmnet)   # lasso
+library(KernSmooth)  # local linear regression
 
 source(here("R", "utils.R"))
 source(here("R", "methods.R"))
 
 
-experiment <- "knockoff_stats"
+experiment <- "main_expr_10"
 
 p <- 1000
 n <- 3*p
@@ -34,13 +38,13 @@ n_cores <- 14
 knockoffs <- create.fixed
 statistic <- stat.glmnet_coefdiff_lm
 
-get_method_list <- get_kn_method_list
-method_names <- c("kn_D_lambdasmax", "kn_D_lambdasmax_lm", "kn_D_coefdiff_lm")
+get_method_list <- get_multi_method_list
+method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
 
 X_titles <- paste0("X: ", X_types)
 
-method_colors <- unname(kn_method_color[method_names])
-method_shapes <- unname(kn_method_shape[method_names])
+method_colors <- unname(multi_method_color[method_names])
+method_shapes <- unname(multi_method_shape[method_names])
 
 
 

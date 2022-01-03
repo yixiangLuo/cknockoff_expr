@@ -103,6 +103,8 @@ draw_runtime_curve <- function(experiment, X_types){
     method_names <- unique(runtime$method)
     method_colors <- unname(multi_method_color[method_names])
     method_shapes <- unname(multi_method_shape[method_names])
+    method_names <- parse_name(method_names)
+    runtime$method <- parse_name(runtime$method)
     
     runtime$design_mat <- factor(runtime$design_mat)
     runtime$alt <- factor(runtime$alt)

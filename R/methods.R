@@ -180,7 +180,7 @@ get_multi_method_list <- function(X, knockoffs, statistic){
         },
         dBH = function(y, X, alpha){
             result <- dBH_lm(y, X, intercept = FALSE, side = "two",
-                             alpha = alpha, gamma = 0.9, niter = 1,
+                             alpha = alpha, gamma = 1, niter = 1,
                              avals_type = "BH", qcap = 2)
 
             t_result <- lm_to_t(y, X, Sigma)

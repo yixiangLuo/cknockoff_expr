@@ -56,7 +56,7 @@ for (i in 1:length(res)){
   }
 }
 
-save(res, file = here("data", "HIV", "HIV_discoveries.RData"))
+save(res, discoveries, file = here("data", "HIV", "HIV_discoveries.RData"))
 
 
 

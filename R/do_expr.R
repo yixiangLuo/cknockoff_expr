@@ -8,11 +8,16 @@ source(here("R", "utils.R"))
 source(here("R", "plot.R"))
 
 # source(here("R", "settings", "test.R"))
+# source(here("R", "settings", "main_expr_largeScale.R"))
+# source(here("R", "settings", "lambdasmax_stat.R"))
+# source(here("R", "settings", "MVR_kn.R"))
+# source(here("R", "settings", "knockoff_stats.R"))
+# source(here("R", "settings", "robust_tNoise.R"))
+# source(here("R", "settings", "robust_noisyBeta.R"))
+
 # source(here("R", "settings", "main_expr_smallScale.R"))
 # source(here("R", "settings", "main_expr_midScale.R"))
-# source(here("R", "settings", "main_expr_largeScale.R"))
-# source(here("R", "settings", "knockoff_stats.R"))
-
+# 
 args <- commandArgs(trailingOnly=TRUE)
 if (length(args) > 1) {
   stop("One and only one experiment at a time.")
@@ -66,7 +71,7 @@ for(X_type in X_types){
 # method_shapes <- unname(multi_method_shape[method_names])
 # method_shapes <- rep(19, 4)
 
-# X_types <- c("IID_Normal", "MCC", "Homo_Block")
+# X_types <- c("IID_Normal", "MCC", "MCC_Block")
 draw_fdp_power_curve(experiment, X_types, sample_size,
                      method_names, method_colors, method_shapes,
                      error_bar = F, direction = F)

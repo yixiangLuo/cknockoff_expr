@@ -12,13 +12,13 @@ source(here("R", "methods.R"))
 
 experiment <- "MVR_kn"
 
-p <- 300
+p <- 1000
 n <- 3*p
 
 X_seed <- 2021
 pi1 <- 10 / p
 
-X_types <- c("IID_Normal", "MCC", "MCC_Block", "Coef_AR", "X_AR")
+X_types <- c("IID_Normal", "MCC", "MCC_Block") # , "Coef_AR", "X_AR"
 posit_types <- rep("random", length(X_types)) # , "random", "fix"
 
 alphas <- c(0.01, 0.05, 0.1, 0.2)

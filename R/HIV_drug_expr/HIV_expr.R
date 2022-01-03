@@ -46,7 +46,7 @@ HIV_expr <- function(X, y, alphas,
   X.pack <- process_X(X, knockoffs = knockoffs)
   knockoffs_gene <- function(X){return(X.pack$X_kn)}
   
-  methods <- c("BH", "dBH", "knockoff", "cKnockoff", "cKnockoff_L_0d8_R_")
+  methods <- c("BH", "dBH", "knockoff", "cKnockoff", "cKnockoff_STAR")
   
   res <- list()
   for (k in 1:nalphas){
@@ -78,17 +78,13 @@ HIV_expr <- function(X, y, alphas,
     
     # cKnockoff
     ckn.result <- cknockoff(prelim_result = kn.result,
-                            n_cores = 7, X.pack = X.pack)
+                            n_cores = 14, X.pack = X.pack)
     obj <- c(obj, list(genes[ckn.result$selected]))
     
-    # cKnockoff(0.8)
-    ckn_hybrid.result <- cknockoff(X, y,
-                                   statistic = statistic,
-                                   alpha = alpha,
-                                   kappa = 0.8,
-                                   n_cores = 7,
-                                   X.pack = X.pack)
-    obj <- c(obj, list(genes[ckn_hybrid.result$selected]))
+    # cKnockoff*
+    ckn_star.result <- cknockoff(prelim_result = ckn.result,
+                                 n_cores = 14, X.pack = X.pack, Rhat_refine = T)
+    obj <- c(obj, list(genes[ckn_star.result$selected]))
     
     names(obj) <- methods
     res[[k]]$rejs <- obj
