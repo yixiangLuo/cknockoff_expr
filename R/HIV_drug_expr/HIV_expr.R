@@ -82,8 +82,8 @@ HIV_expr <- function(X, y, alphas,
     obj <- c(obj, list(genes[ckn.result$selected]))
     
     # cKnockoff*
-    ckn_star.result <- cknockoff(prelim_result = ckn.result,
-                                 n_cores = 14, X.pack = X.pack, Rhat_refine = T)
+    ckn_star.result <- cknockoff(prelim_result = ckn.result, Rhat_refine = T,
+                                 n_cores = 14, X.pack = X.pack)
     obj <- c(obj, list(genes[ckn_star.result$selected]))
     
     names(obj) <- methods
@@ -94,6 +94,7 @@ HIV_expr <- function(X, y, alphas,
 }
 
 set.seed(2021)
+n_sample <- 20
 alphas <- c(0.05, 0.2)
 res <- list()
 
@@ -102,12 +103,14 @@ for (drug_class in names(data)){
   X <- data[[drug_class]]$X
   res[[drug_class]] <- lapply(1:length(Y), function(j){
     print(j)
-    HIV_expr(X, Y[[j]], alphas)
+    lapply(1:n_sample, function(iter){
+      HIV_expr(X, Y[[j]], alphas)
+    })
   })
   save(res, file = here("data", "HIV", paste0("HIV_res-", drug_class, ".RData")))
 }
 
-save(res, file = here("data", "HIV", "HIV_res.RData"))
+save(res, n_sample, alphas, file = here("data", "HIV", "HIV_res.RData"))
 
 
 

@@ -1,3 +1,5 @@
+source(here("R", "multi_knockoff.R"))
+
 
 # weighted BH method
 BH_weighted <- function(pvals, alpha,
@@ -105,6 +107,7 @@ BonfBH <- function(X, y, alpha, BonfBH_X = NULL){
 
 
 
+
 process_y <- function(X.pack, y, randomize = F){
 
     n <- NROW(X.pack$X)
@@ -164,6 +167,8 @@ get_multi_method_list <- function(X, knockoffs, statistic){
         warning('Input X has dimensions n < 2p+1. ',
                 'Cannot use BonfBH.', immediate.=T)
     }
+    mkn_k <- 5
+    mkn_X.pack <- create.mkn(X, mkn_k)
 
     methods <- list(
         BH = function(y, X, alpha){
@@ -180,7 +185,7 @@ get_multi_method_list <- function(X, knockoffs, statistic){
         },
         dBH = function(y, X, alpha){
             result <- dBH_lm(y, X, intercept = FALSE, side = "two",
-                             alpha = alpha, gamma = 1, niter = 1,
+                             alpha = alpha, gamma = 0.9, niter = 1,
                              avals_type = "BH", qcap = 2)
 
             t_result <- lm_to_t(y, X, Sigma)
@@ -199,6 +204,16 @@ get_multi_method_list <- function(X, knockoffs, statistic){
             result <- kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
             sign_predict <- sign(c(matrix(y, nrow = 1) %*% (X.pack$X - X.pack$X_kn)))
 
+            return(list(selected = result$selected, sign_predict = sign_predict))
+        },
+        mKnockoff = function(y, X, alpha){
+            sigma_tilde <- sqrt((sum((matrix(y, nrow = 1) %*% mkn_X.pack$res_basis)^2)) / (n - (mkn_k+1)*p))
+            
+            scores <- score.glmnet_coefdiff_lm(mkn_X.pack$X, mkn_X.pack$Xk, y, sigma_tilde)
+            
+            result <- mkn.select(scores$order_stats, scores$org_ranks, mkn_k, alpha)
+            sign_predict <- rep(NA, NCOL(X))
+            
             return(list(selected = result$selected, sign_predict = sign_predict))
         },
         BonBH = function(y, X, alpha){
@@ -228,11 +243,11 @@ get_multi_method_list <- function(X, knockoffs, statistic){
     return(methods)
 }
 
-multi_method_color <- c("#984ea3", "dodgerblue3", "#333333", "#33a02c", "red", "orange1")
-names(multi_method_color) <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
+multi_method_color <- c("#984ea3", "dodgerblue3", "#333333", "#006d2c", "#33a02c", "red", "orange1")
+names(multi_method_color) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
 
-multi_method_shape <- c(3, 4, 17, 23, 19, 15)
-names(multi_method_shape) <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
+multi_method_shape <- c(3, 4, 17, 6, 23, 19, 15)
+names(multi_method_shape) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
 
 
 get_kn_method_list <- function(X, knockoffs, statistic){

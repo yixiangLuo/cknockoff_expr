@@ -36,16 +36,18 @@ res <- do.call(c, res)
 discoveries <- data.frame()
 for (i in 1:length(res)){
   signals <- signal_genes[[i]]
-  for (j in 1:length(res[[i]])){
-    num_discoveries <- sapply(
-      res[[i]][[j]]$rejs, function(rejs){
+  for (j in 1:length(alphas)){
+    num_discoveries <- lapply(1:n_sample, function(k){
+      sapply(res[[i]][[k]][[j]]$rejs, function(rejs){
         rejs <- unique(get_position(rejs))
         true_discoveries <- length(intersect(rejs, signals))
         false_discoveries <- length(setdiff(rejs, signals))
         c(true_discoveries, false_discoveries)
       })
+    })
+    num_discoveries <- Reduce('+', num_discoveries) / n_sample
     df <- data.frame(
-      alpha = res[[i]][[j]]$alpha,
+      alpha = res[[i]][[1]][[j]]$alpha,
       drug_class = drug_classes[i],
       drug_name = drug_names[i],
       method = colnames(num_discoveries),
