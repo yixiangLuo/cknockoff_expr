@@ -11,13 +11,13 @@ source(here("R", "utils.R"))
 source(here("R", "methods.R"))
 
 
-experiment <- "main_expr_largeScale"
+experiment <- "main_expr_30"
 
 p <- 1000
 n <- 3*p
 
 X_seed <- 2021
-pi1 <- 10 / p
+pi1 <- 30 / p
 
 X_types <- c("IID_Normal", "MCC", "MCC_Block", "Coef_AR", "X_AR")
 posit_types <- rep("random", length(X_types)) # , "random", "fix"

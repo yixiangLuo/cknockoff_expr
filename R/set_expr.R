@@ -80,6 +80,7 @@ expr_bash <- readLines(con)
 close(con)
 
 # specify file content
+expr_bash[3] <- paste0("#SBATCH --job-name=", experiment)
 expr_bash[4] <- paste0("#SBATCH --output=../log/", experiment, "/%a.out")
 expr_bash[5] <- paste0("#SBATCH --array=1-", n_jobs)
 expr_bash[14] <- paste0("EXPERIMENT=", experiment)

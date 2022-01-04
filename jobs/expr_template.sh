@@ -8,7 +8,7 @@
 #SBATCH --nodes=1
 #SBATCH --time=2-00:00:00
 
-#SBATCH --mail-user=yixiangluo0111@gmail.com
+#SBATCH --mail-user=yixiangluo@berkeley.edu
 #SBATCH --mail-type=ALL
 
 EXPERIMENT=expr

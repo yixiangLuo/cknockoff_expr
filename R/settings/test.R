@@ -51,7 +51,8 @@ target_at_alpha <- 0.2
 sample_size <- 10
 n_cores <- 14
 
-knockoffs <- create.fixed
+# knockoffs <- create.fixed
+knockoffs <- create.fixed.MRC
 statistic <- stat.glmnet_coefdiff_lm
 
 get_method_list <- get_multi_method_list

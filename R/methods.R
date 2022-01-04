@@ -209,18 +209,18 @@ get_multi_method_list <- function(X, knockoffs, statistic){
             result <- cknockoff(X, y,
                                 statistic = statistic,
                                 alpha = alpha,
+                                Rhat_refine = F,
                                 n_cores = 1,
-                                X.pack = X.pack,
-                                Rhat_refine = F)
+                                X.pack = X.pack)
             return(list(selected = result$selected, sign_predict = result$sign_predict))
         },
         cKnockoff_STAR = function(y, X, alpha){
             result <- cknockoff(X, y,
                                 statistic = statistic,
                                 alpha = alpha,
+                                Rhat_refine = T,
                                 n_cores = 1,
-                                X.pack = X.pack,
-                                Rhat_refine = T)
+                                X.pack = X.pack)
             return(list(selected = result$selected, sign_predict = result$sign_predict))
         }
     )

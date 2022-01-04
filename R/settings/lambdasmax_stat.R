@@ -13,7 +13,7 @@ source(here("R", "methods.R"))
 
 experiment <- "lambdasmax_stat"
 
-p <- 300
+p <- 1000
 n <- 3*p
 
 X_seed <- 2021

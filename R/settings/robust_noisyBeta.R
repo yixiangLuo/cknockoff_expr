@@ -13,7 +13,7 @@ source(here("R", "methods.R"))
 
 experiment <- "robust_noisyBeta"
 
-p <- 300
+p <- 1000
 n <- 3*p
 
 X_seed <- 2021
@@ -29,7 +29,7 @@ beta_permutes <- c(quote(beta[H0] <- runif(sum(H0), min = -0*mu1, max = 0*mu1)),
                    quote(beta[H0] <- runif(sum(H0), min = -0.3*mu1, max = 0.3*mu1)))
 noises <- c(quote(rnorm(n)))
 
-fig_x_var <- list(name = "maximal noise magnitude / mu1", value = c(0, 0.1, 0.2, 0.3))
+fig_x_var <- list(name = TeX("maximal noise magnitude / $\\beta^*$"), value = c(0, 0.1, 0.2, 0.3))
 makeup_vectors(alphas = alphas, beta_permutes = beta_permutes, noises = noises)
 
 target <- 0.5
