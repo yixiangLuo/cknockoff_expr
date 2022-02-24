@@ -58,7 +58,7 @@ BH_lm <- function(y, X, side = "two", alpha,
     return(BH_result)
 }
 
-precompute_BonfBH_X <- function(X, knockoffs = knockoff::create.fixed){
+precompute_BonfBH_X <- function(X, knockoffs = ckn.create.fixed){
     knockoff <- knockoffs(X)
     X <- knockoff$X
     X_kn <- knockoff$Xk
@@ -110,47 +110,84 @@ BonfBH <- function(X, y, alpha, BonfBH_X = NULL){
 
 process_y <- function(X.pack, y, randomize = F){
 
-    n <- NROW(X.pack$X)
+    n <- length(y)
     p <- NCOL(X.pack$X)
-    df <- n-p
-
-    y.org.nrow <- length(y)
-
-    y <- matrix(y, nrow = 1)
-    y_Pi_X <- X.pack$X_basis %*% t(y %*% X.pack$X_basis[1:y.org.nrow, ])
-    y_Pi_X_res_norm2 <- sum(y^2) - sum(y_Pi_X^2)
-
-    if(y.org.nrow < 2*p){
+    
+    # compute RSS and degree of freedom in y ~ X
+    RSS_X <- sum(y^2) - sum((matrix(y, nrow=1) %*% X.pack$XXk.org.basis[1:n, 1:p])^2)
+    df_X <- n - p
+    
+    # augment y if needed
+    if(n < 2*p){
         if(randomize){
-            y.extra <- rnorm(2*p-y.org.nrow,
-                             sd = sqrt(y_Pi_X_res_norm2 / (X.pack$X.org.nrow - p)))
+            y.extra <- rnorm(2*p-n, sd = sqrt(RSS_X / (n - p)))
         } else{
-            y.extra <- with_seed(0, rnorm(2*p-y.org.nrow,
-                                          sd = sqrt(y_Pi_X_res_norm2 / (X.pack$X.org.nrow - p))))
+            y.extra <- with_seed(0, rnorm(2*p-n, sd = sqrt(RSS_X / (n - p))))
         }
         y <- c(y, y.extra)
     }
-    if(y.org.nrow < 2*p+1){
-        y <- c(y, sqrt(y_Pi_X_res_norm2 / (X.pack$X.org.nrow - p)))
+    
+    # record the original y before rotation
+    y.org <- y
+    
+    # rotate y in the same way as we did for [X Xk]
+    y.norm2 <- sum(y^2)
+    y <- as.vector(matrix(y, nrow=1) %*% X.pack$XXk.org.basis)
+    
+    # the component of y not in the 2p-dim subspace (residue of y~[X Xk])
+    # is recorded separately as RSS_XXk and df_XXk
+    if(n < 2*p+1){
+        RSS_XXk <- RSS_X
+        df_XXk <- df_X
+    } else{
+        RSS_XXk <- y.norm2 - sum(y^2)
+        df_XXk <- n - 2*p
     }
-    y_Pi_X_res_norm2 <- sum(y^2) - sum(y_Pi_X^2)
+    
+    sigmahat_XXk_res <- sqrt((RSS_XXk) / df_XXk)
 
-    y <- matrix(y, nrow = 1)
+    return(list(y = as.vector(y), y.org = as.vector(y.org),
+                sigmahat_XXk_res = sigmahat_XXk_res))
+}
 
-
-    vjy_obs <- c(y %*% X.pack$vj_mat)
-
-    y_Pi_Xnoj <- sapply(1:p, function(j){
-        y_Pi_X - X.pack$vj_mat[, j] * vjy_obs[j]
-    })
-
-    y_Pi_Xnoj_res_norm2 <- y_Pi_X_res_norm2 + vjy_obs^2
-    sigmahat_XXk_res <- sqrt((y_Pi_X_res_norm2 - sum((y %*% X.pack$X_res_Xk_basis)^2)) / (n - 2*p))
-
-    return(list(n = n, p = p, df = df, y = as.vector(y), vjy_obs = vjy_obs,
-                y_Pi_X_res_norm2 = y_Pi_X_res_norm2, y_Pi_Xnoj_res_norm2 = y_Pi_Xnoj_res_norm2,
-                sigmahat_XXk_res = sigmahat_XXk_res,
-                y_Pi_Xnoj = y_Pi_Xnoj))
+kn.select <- function(kn_statistics, alpha,
+                      selective = T, early_stop = F){
+    p <- length(kn_statistics)
+    W_desc_ind <- order(abs(kn_statistics), decreasing = T)
+    W_desc <- kn_statistics[W_desc_ind]
+    
+    # fdp <- sapply(abs(W_desc), function(t){
+    #     (1 + sum(kn_statistics <= -t)) / max(1, sum(kn_statistics >= t))
+    # })
+    fdp <- rep(NA, p)
+    neg_stat_num <- 0
+    pos_stat_num <- 0
+    for(k in 1:p){
+        pos_stat_num <- pos_stat_num + (W_desc[k] > 0)
+        neg_stat_num <- neg_stat_num + (W_desc[k] < 0)
+        fdp[k] <- (1 + neg_stat_num) / max(1, pos_stat_num)
+    }
+    ok <- which(fdp <= alpha)
+    k_hat <- ifelse(length(ok) > 0, max(ok), 0)
+    
+    if(early_stop){
+        ok <- which(cumsum(W_desc > 0) < 1/alpha)
+        k_hat <- max(k_hat, ifelse(length(ok) > 0, max(ok), 0))
+    }
+    # if(early_stop == 2){
+    #   ok <- which((fdp <= 1) & (cumsum(W_desc > 0) < 1/alpha))
+    #   k_hat <- max(k_hat, ifelse(length(ok) > 0, max(ok), 0))
+    # }
+    
+    if(k_hat > 0){
+        selected <- sort(W_desc_ind[which(W_desc[1:k_hat] > 0)])
+    } else{
+        selected <- NULL
+    }
+    fdp_est <- ifelse(k_hat > 0, fdp[k_hat], 1)
+    W_k_hat <- abs(W_desc[max(k_hat, 1)])
+    
+    results <- list(selected = selected, fdp_est = fdp_est,  W_k_hat = W_k_hat)
 }
 
 
@@ -159,7 +196,7 @@ get_multi_method_list <- function(X, knockoffs, statistic){
     p <- NCOL(X)
 
     Sigma <- solve(t(X) %*% X)
-    X.pack <- process_X(X, knockoffs = knockoffs)
+    X.pack <- process_X(X, knockoffs = knockoffs, intercept = F)
     if(n > 2*p){
         BonfBH_X <- precompute_BonfBH_X(X)
     } else{
@@ -167,8 +204,8 @@ get_multi_method_list <- function(X, knockoffs, statistic){
         warning('Input X has dimensions n < 2p+1. ',
                 'Cannot use BonfBH.', immediate.=T)
     }
-    mkn_k <- 5
-    mkn_X.pack <- create.mkn(X, mkn_k)
+    # mkn_k <- 5
+    # mkn_X.pack <- create.mkn(X, mkn_k)
 
     methods <- list(
         BH = function(y, X, alpha){
@@ -196,46 +233,49 @@ get_multi_method_list <- function(X, knockoffs, statistic){
         },
         knockoff = function(y, X, alpha){
             y.pack <- process_y(X.pack, y)
-            y <- y.pack$y
             sigma_tilde <- y.pack$sigmahat_XXk_res
-
-            kn_stats_obs <- statistic(X.pack$X, X.pack$X_kn, y, sigma_tilde = sigma_tilde)
+            
+            kn_stats_obs <- statistic(X.pack$X.org, X.pack$X_kn.org,
+                                      y.pack$y.org, sigma_tilde = sigma_tilde)
 
             result <- kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
-            sign_predict <- sign(c(matrix(y, nrow = 1) %*% (X.pack$X - X.pack$X_kn)))
+            sign_predict <- sign(c(matrix(y.pack$y.org, nrow = 1) %*% 
+                                       (X.pack$X.org - X.pack$X_kn.org)))
 
             return(list(selected = result$selected, sign_predict = sign_predict))
         },
-        mKnockoff = function(y, X, alpha){
-            sigma_tilde <- sqrt((sum((matrix(y, nrow = 1) %*% mkn_X.pack$res_basis)^2)) / (n - (mkn_k+1)*p))
-            
-            scores <- score.glmnet_coefdiff_lm(mkn_X.pack$X, mkn_X.pack$Xk, y, sigma_tilde)
-            
-            result <- mkn.select(scores$order_stats, scores$org_ranks, mkn_k, alpha)
-            sign_predict <- rep(NA, NCOL(X))
-            
-            return(list(selected = result$selected, sign_predict = sign_predict))
-        },
+        # mKnockoff = function(y, X, alpha){
+        #     sigma_tilde <- sqrt((sum((matrix(y, nrow = 1) %*% mkn_X.pack$res_basis)^2)) / (n - (mkn_k+1)*p))
+        #     
+        #     scores <- score.glmnet_coefdiff_lm(mkn_X.pack$X, mkn_X.pack$Xk, y, sigma_tilde)
+        #     
+        #     result <- mkn.select(scores$order_stats, scores$org_ranks, mkn_k, alpha)
+        #     sign_predict <- rep(NA, NCOL(X))
+        #     
+        #     return(list(selected = result$selected, sign_predict = sign_predict))
+        # },
         BonBH = function(y, X, alpha){
             result <- BonfBH(X, y, alpha, BonfBH_X = BonfBH_X)
             return(list(selected = result$rejs))
         },
         cKnockoff = function(y, X, alpha){
             result <- cknockoff(X, y,
+                                intercept = F,
                                 statistic = statistic,
                                 alpha = alpha,
                                 n_cores = 1,
                                 X.pack = X.pack,
-                                Rhat_refine = F)
+                                Rstar_refine = F)
             return(list(selected = result$selected, sign_predict = result$sign_predict))
         },
         cKnockoff_STAR = function(y, X, alpha){
             result <- cknockoff(X, y,
+                                intercept = F,
                                 statistic = statistic,
                                 alpha = alpha,
                                 n_cores = 1,
                                 X.pack = X.pack,
-                                Rhat_refine = T)
+                                Rstar_refine = T)
             return(list(selected = result$selected, sign_predict = result$sign_predict))
         }
     )
@@ -251,41 +291,43 @@ names(multi_method_shape) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "c
 
 
 get_kn_method_list <- function(X, knockoffs, statistic){
-    X.pack <- process_X(X, knockoffs = knockoffs)
+    X.pack <- process_X(X, knockoffs = knockoffs, intercept = F)
     knockoffs_gene <- function(X){return(X.pack$X_kn)}
 
     methods <- list(
         kn_D_lambdasmax = function(y, X, alpha){
             y.pack <- process_y(X.pack, y)
-            y <- y.pack$y
 
-            result <- knockoff.filter(X.pack$X, y, knockoffs = knockoffs_gene,
+            result <- knockoff.filter(X.pack$X.org, y.pack$y.org, knockoffs = knockoffs_gene,
                                       statistic = stat.glmnet_lambdasmax, fdr = alpha)
-            sign_predict <- sign(c(matrix(y, nrow = 1) %*% (X.pack$X - X.pack$X_kn)))
+            sign_predict <- sign(c(matrix(y.pack$y.org, nrow = 1) %*% 
+                                       (X.pack$X.org - X.pack$X_kn.org)))
 
             return(list(selected = result$selected, sign_predict = sign_predict))
         },
         kn_D_lambdasmax_lm = function(y, X, alpha){
             y.pack <- process_y(X.pack, y)
-            y <- y.pack$y
             sigma_tilde <- y.pack$sigmahat_XXk_res
 
-            kn_stats_obs <- stat.glmnet_lambdasmax_lm(X.pack$X, X.pack$X_kn, y, sigma_tilde = sigma_tilde)
+            kn_stats_obs <- stat.glmnet_lambdasmax_lm(X.pack$X.org, X.pack$X_kn.org,
+                                                      y.pack$y.org, sigma_tilde = sigma_tilde)
 
             result <- kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
-            sign_predict <- sign(c(matrix(y, nrow = 1) %*% (X.pack$X - X.pack$X_kn)))
+            sign_predict <- sign(c(matrix(y.pack$y.org, nrow = 1) %*% 
+                                       (X.pack$X.org - X.pack$X_kn.org)))
 
             return(list(selected = result$selected, sign_predict = sign_predict))
         },
         kn_D_coefdiff_lm = function(y, X, alpha){
             y.pack <- process_y(X.pack, y)
-            y <- y.pack$y
             sigma_tilde <- y.pack$sigmahat_XXk_res
 
-            kn_stats_obs <- stat.glmnet_coefdiff_lm(X.pack$X, X.pack$X_kn, y, sigma_tilde = sigma_tilde)
+            kn_stats_obs <- stat.glmnet_coefdiff_lm(X.pack$X.org, X.pack$X_kn.org,
+                                                    y.pack$y.org, sigma_tilde = sigma_tilde)
 
             result <- kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
-            sign_predict <- sign(c(matrix(y, nrow = 1) %*% (X.pack$X - X.pack$X_kn)))
+            sign_predict <- sign(c(matrix(y.pack$y.org, nrow = 1) %*% 
+                                       (X.pack$X.org - X.pack$X_kn.org)))
 
             return(list(selected = result$selected, sign_predict = sign_predict))
         }

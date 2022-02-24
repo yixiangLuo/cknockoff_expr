@@ -14,7 +14,7 @@ source(here("R", "methods.R"))
 experiment <- "test"
 
 p <- 100
-n <- 7*p
+n <- 3*p
 
 X_seed <- 2021
 pi1 <- 10 / p
@@ -51,11 +51,11 @@ target_at_alpha <- 0.2
 sample_size <- 100
 n_cores <- 14
 
-knockoffs <- create.fixed
+knockoffs <- ckn.create.fixed
 statistic <- stat.glmnet_coefdiff_lm
 
 get_method_list <- get_multi_method_list
-method_names <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
+method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR") #, "mKnockoff"
 # method_names <- c("knockoff", "mKnockoff")
 
 X_titles <- paste0("X: ", X_types)

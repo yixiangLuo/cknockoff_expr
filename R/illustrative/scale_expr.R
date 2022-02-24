@@ -12,7 +12,7 @@ source(here("R", "utils.R"))
 source(here("R", "plot.R"))
 
 
-experiment <- "scale_expr"
+experiment <- "scale_expr_n7m"
 
 X_types <- c("IID_Normal", "MCC")
 alpha <- 0.05
@@ -29,7 +29,7 @@ n_cores <- 14
 X_seed <- 2021
 noise <- quote(rnorm(n))
 
-knockoffs.name <- "create.fixed"
+knockoffs.name <- "ckn.create.fixed"
 statistic.name <- "stat.glmnet_coefdiff_lm"
 
 knockoffs <- get(knockoffs.name)
@@ -45,7 +45,7 @@ runtime.result <- lapply(X_types, function(X_type){
     
     runtime_vec <- sapply(1:length(p_vec), function(iter){
       p <- p_vec[iter]
-      n <- 3*(p+1)
+      n <- 7 * p
       
       print(p)
       
@@ -78,20 +78,22 @@ runtime.result <- lapply(X_types, function(X_type){
         
         time_start <- Sys.time()
         ckn.result <- cknockoff(X, y,
+                                intercept = F,
                                 statistic = statistic,
                                 alpha = alpha,
                                 n_cores = 1,
-                                Rhat_refine = F)
+                                Rstar_refine = F)
         time_end <- Sys.time()
         
         ckn.runtime <- difftime(time_end, time_start, units = "secs")[[1]]
         
         time_start <- Sys.time()
         ckn_star.result <- cknockoff(X, y,
+                                     intercept = F,
                                      statistic = statistic,
                                      alpha = alpha,
                                      n_cores = 1,
-                                     Rhat_refine = T)
+                                     Rstar_refine = T)
         time_end <- Sys.time()
         
         ckn_star.runtime <- difftime(time_end, time_start, units = "secs")[[1]]

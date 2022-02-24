@@ -87,6 +87,100 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
     return(plot)
 }
 
+draw_fdp_power_dist <- function(experiment, X_types, method_names, method_colors,
+                                type = "TPP", figure = "ECDF"){
+    load(here("data", paste0(experiment, ".Rdata")))
+    
+    method_names_org <- unique(results[[1]]$FDR_Power$method_name)
+    method_level_org <- factor(seq_along(method_names_org), ordered = T)
+    names(method_level_org) <- method_names_org
+    data_index <- ifelse(type == "FDP", 1, 2)
+    cdf_x <- seq(from = 0, to = 1, length.out = 100)
+    
+    plot_data <- lapply(X_types, function(X_type){
+        org_data_list <- results[[X_type]]$org_data
+        org_df <- lapply(1:length(org_data_list), function(fig_x_ind){
+            data_fig_x <- org_data_list[[fig_x_ind]][data_index, , ]
+            rownames(data_fig_x) <- method_names_org
+            
+            if(figure == "hist"){
+                data_fig_x <- as.data.frame(t(data_fig_x)) %>%
+                    pivot_longer(everything(), names_to = "method_name", values_to = "value") %>%
+                    mutate(fig_x = fig_x_var$value[fig_x_ind],
+                           methods = unname(method_level_org[method_name]))
+            } else{
+                data_fig_x <- sapply(as.data.frame(t(data_fig_x)), function(col){
+                    ECDF <- ecdf(col)(cdf_x)
+                })
+                data_fig_x <- as.data.frame(data_fig_x) %>% 
+                    mutate(ecdf_x = cdf_x) %>%
+                    pivot_longer(!ecdf_x, names_to = "method_name", values_to = "value") %>%
+                    mutate(fig_x = fig_x_var$value[fig_x_ind],
+                           methods = unname(method_level_org[method_name]))
+            }
+            
+            return(data_fig_x)
+        })
+        do.call(rbind, org_df) %>% mutate(design_mat = str_replace(X_type, "_", "-"))
+    })
+    plot_data <- do.call(rbind, plot_data)
+    
+    X_types <- str_replace(X_types, "_", "-")
+    rm(results)
+    
+    plot_data <- plot_data %>% 
+        filter(design_mat %in% X_types,
+               method_name %in% method_names) %>%
+        arrange(methods)
+    
+    methods_level <- unique(plot_data$methods)
+    
+    method_names <- parse_name(method_names)
+    
+    if(figure == "hist"){
+        plot <- ggplot(plot_data) +
+            geom_histogram(aes(x = value, fill = methods, color = methods),
+                           alpha = 0.5, position = "identity") +
+            facet_grid(vars(factor(design_mat, levels = X_types)),
+                       vars(factor(fig_x, levels = fig_x_var$value)), scales="free") +
+            scale_fill_manual(values = method_colors, labels = method_names, breaks = methods_level) +
+            scale_color_manual(values = method_colors, labels = method_names, breaks = methods_level) +
+            theme_bw() +
+            theme(aspect.ratio = 1,
+                  # panel.grid = element_blank(),
+                  strip.text = element_text(size = 13),
+                  axis.title = element_text(size = 11),
+                  axis.text = element_text(size = 8),
+                  legend.position = "right",
+                  legend.title=element_text(size=9),
+                  legend.text=element_text(size=9)) +
+            labs(x = type)
+    } else{
+        plot <- ggplot(plot_data) +
+            geom_line(aes(x = ecdf_x, y = value, color = methods)) +
+            facet_grid(vars(factor(design_mat, levels = X_types)),
+                       vars(factor(fig_x, levels = fig_x_var$value)), scales="free") +
+            scale_color_manual(values = method_colors, labels = method_names, breaks = methods_level) +
+            theme_bw() +
+            theme(aspect.ratio = 1,
+                  # panel.grid = element_blank(),
+                  strip.text = element_text(size = 13),
+                  axis.title = element_text(size = 11),
+                  axis.text = element_text(size = 8),
+                  legend.position = "right",
+                  legend.title=element_text(size=9),
+                  legend.text=element_text(size=9)) +
+            labs(x = type, y = "ECDF")
+    }
+    
+
+    ggsave(filename = here("figs", paste0(experiment, "-", type, "-", figure ,".pdf")),
+           plot, width = 11, height = 2*(length(X_types)+1))
+    
+    return(plot)
+}
+
+
 draw_runtime_curve <- function(experiment, X_types){
     load(here("data", paste0(experiment, ".Rdata")))
     alt_types <- c("fixed_alt", "fixed_ratio")

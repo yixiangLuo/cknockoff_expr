@@ -17,9 +17,9 @@ source(here("R", "plot.R"))
 
 experiment <- "kn_conservative"
 
-p <- 100
+p <- 1000
 n <- 3*p
-X_type <- "IID_Normal"
+X_type <- "MCC_Block"
 X_seed <- 2021
 
 pi1 <- 10 / p
@@ -29,19 +29,20 @@ noise <- quote(rnorm(n))
 target <- 0.5
 target_at_alpha <- 0.2
 
-sample_size <- 5000
+sample_size <- 100
 
-n_cores <- 7
+n_cores <- 14
 
 knockoffs <- create.fixed
 statistic <- stat.glmnet_coefdiff_lm
 
-alphas <- seq(from = 0.005, to = 0.3, length.out = 100)
+# alphas <- seq(from = 0.005, to = 0.3, length.out = 100)
+alphas <- seq(from = 0.05, to = 0.2, by = 0.05)
 
 
 
 X <- gene_X(X_type, n, p, X_seed)
-X.pack <- process_X(X, knockoffs = knockoffs)
+X.pack <- process_X(X, knockoffs = knockoffs, intercept = F)
 
 mu1 <- BH_lm_calib(X, pi1, noise, posit_type, 1, side = "two", nreps = 200,
                    alpha = target_at_alpha, target = target, n_cores = n_cores)
@@ -54,7 +55,47 @@ registerDoParallel(n_cores)
 
 
 
-
+transform_y <- function(X.pack, y, randomize = F){
+    n <- length(y)
+    p <- NCOL(X.pack$X)
+    
+    # compute RSS and degree of freedom in y ~ X
+    RSS_X <- sum(y^2) - sum((matrix(y, nrow=1) %*% X.pack$XXk.org.basis[1:n, 1:p])^2)
+    df_X <- n - p
+    
+    # augment y if needed
+    if(n < 2*p){
+        if(randomize){
+            y.extra <- rnorm(2*p-n, sd = sqrt(RSS_X / (n - p)))
+        } else{
+            y.extra <- with_seed(0, rnorm(2*p-n, sd = sqrt(RSS_X / (n - p))))
+        }
+        y <- c(y, y.extra)
+    }
+    
+    # record the original y before rotation
+    y.org <- y
+    
+    # rotate y in the same way as we did for [X Xk]
+    y.norm2 <- sum(y^2)
+    y <- as.vector(matrix(y, nrow=1) %*% X.pack$XXk.org.basis)
+    
+    # the component of y not in the 2p-dim subspace (residue of y~[X Xk])
+    # is recorded separately as RSS_XXk and df_XXk
+    if(n < 2*p+1){
+        RSS_XXk <- RSS_X
+        df_XXk <- df_X
+    } else{
+        RSS_XXk <- y.norm2 - sum(y^2)
+        df_XXk <- n - 2*p
+    }
+    
+    y.data <- list(y = y, y.org = y.org,
+                   RSS_X = RSS_X, RSS_XXk = RSS_XXk,
+                   df_X = df_X, df_XXk = df_XXk)
+    return(y.data)
+    
+}
 
 kn.select <- function(kn_statistics, alpha,
                       selective = T, early_stop = F){
@@ -106,7 +147,10 @@ results <- foreach(iter = 1:sample_size) %dopar% {
     
     y <- X %*% beta + eval(noise)
     
-    kn.stats <- statistic(X.pack$X, X.pack$X_k, y)
+    y.data <- transform_y(X.pack, y)
+    
+    kn.stats <- statistic(X.pack$X, X.pack$X_kn, y.data$y,
+                          sigma_tilde = sqrt(y.data$RSS_XXk / y.data$df_XXk))
     
     result_y <- sapply(alphas, function(alpha){
         kn.result <- kn.select(kn.stats, alpha, selective = T, early_stop = F)

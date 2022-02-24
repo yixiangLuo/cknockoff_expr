@@ -11,24 +11,23 @@ library(doParallel)
 
 source(here("R", "utils.R"))
 source(here("R", "methods.R"))
-source(here("R", "plot.R"))
 
 
 experiment <- "ROC_compare"
 
-p <- 500
+p <- 100
 n <- 3*p
 X_type <- "MCC_Block"
 X_seed <- 2021
 
-pi1 <- 50 / p
+pi1 <- 10 / p
 posit_type <- "random"
 noise <- quote(rnorm(n))
 
-target <- 0.3
+target <- 0.5
 target_at_alpha <- 0.2
 
-sample_size <- 1
+sample_size <- 100
 
 n_cores <- 14
 
@@ -72,54 +71,82 @@ results <- foreach(iter = 1:sample_size) %dopar% {
         FDP <- length(intersect(selected, which(H0))) / max(length(selected), 1)
         FPP <- length(intersect(selected, which(H0))) / ((1-pi1) * p)
         TPP <- length(intersect(selected, which(!H0))) / (pi1 * p)
-        return(c(FPP, FDP, TPP))
+        return(c(FPP, FDP, TPP, length(selected)))
     })
     OLS_ROC <- data.frame(FPP = OLS_ROC[1, ], FDP = OLS_ROC[2, ],
-                          TPP = OLS_ROC[3, ], stat = "OLS")
+                          TPP = OLS_ROC[3, ], n_sel = OLS_ROC[4, ],
+                          stat = "OLS") %>%
+        mutate(FPP = FPP + 1e-10 * TPP, FDP = FDP + 1e-10 * TPP)
     
     LASSO_ROC <- sapply(sort(LASSO_beta), function(thr){
         selected <- which(LASSO_beta >= thr)
         FDP <- length(intersect(selected, which(H0))) / max(length(selected), 1)
         FPP <- length(intersect(selected, which(H0))) / ((1-pi1) * p)
         TPP <- length(intersect(selected, which(!H0))) / (pi1 * p)
-        return(c(FPP, FDP, TPP))
+        return(c(FPP, FDP, TPP, length(selected)))
     })
     LASSO_ROC <- data.frame(FPP = LASSO_ROC[1, ], FDP = LASSO_ROC[2, ],
-                            TPP = LASSO_ROC[3, ], stat = "LASSO")
+                            TPP = LASSO_ROC[3, ], n_sel = LASSO_ROC[4, ],
+                            stat = "LASSO") %>%
+        mutate(FPP = FPP + 1e-10 * TPP, FDP = FDP + 1e-10 * TPP)
     
     return(list(OLS_ROC = OLS_ROC, LASSO_ROC = LASSO_ROC))
 }
 
-result <- results[[1]]
-plot_data <- rbind(result$OLS_ROC, result$LASSO_ROC) %>%
-    mutate(FPP = FPP + 1e-10 * TPP, FDP = FDP + 1e-10 * TPP)
+grid_num <- 5000
+x_points <- seq(from = 0, to = 0.5, length.out = grid_num)
+x_var <- "FDP"
+
+TPP_OLS <- sapply(results, function(result){
+    approx(x = result$OLS_ROC[[x_var]], 
+           y = result$OLS_ROC$TPP, 
+           xout = x_points,
+           method="linear")$y
+})
+TPP_OLS <- rowMeans(TPP_OLS, na.rm = T)
+
+TPP_LASSO <- sapply(results, function(result){
+    approx(x = result$LASSO_ROC[[x_var]], 
+           y = result$LASSO_ROC$TPP, 
+           xout = x_points,
+           method="linear")$y
+})
+TPP_LASSO <- rowMeans(TPP_LASSO, na.rm = T)
+
+plot_data <- data.frame(var = rep(x_points, 2),
+                        TPP = c(TPP_OLS, TPP_LASSO),
+                        stat = rep(c("OLS", "LASSO"), each = grid_num))
 
 method_colors <- c("dodgerblue3", "red")
-method_names <- unname(TeX(c("$|\\hat{\\beta}_{OLS}|$", "$|\\hat{\\beta}_{LASSO}|$")))
+# method_names <- unname(TeX(c("$|\\hat{\\beta}_{OLS}|$", "$|\\hat{\\beta}_{LASSO}|$")))
+method_names <- c("OLS", "LASSO")
 
-plot <- ggplot(plot_data) +
-    geom_line(aes(x = FPP, y = TPP, color = stat)) +
+ggplot(plot_data) +
+    geom_line(aes(x = var, y = TPP, color = stat)) +
     scale_color_manual(values = method_colors, breaks = c("OLS", "LASSO"),
                        labels = method_names) +
+    scale_x_continuous(limits = c(0, 0.5), expand = c(0, 0)) +
+    scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
     theme_bw() +
     theme(aspect.ratio = 1,
           # panel.grid = element_blank(),
+          panel.border = element_blank(),
           strip.text = element_text(size = 13),
           axis.title = element_text(size = 11),
           axis.text = element_text(size = 8),
           legend.position = "right",
           legend.title=element_text(size=9),
           legend.text=element_text(size=9)) +
-    labs(color = "reject for large")
+    labs(color = "variable ordering", x = x_var)
 
 # figure <- ggarrange(plot1, plot2,
 #                     # labels = c("A", "B", "C"),
-#                     ncol = 1, nrow = 2,
+#                     ncol = 2, nrow = 1,
 #                     common.legend = T, legend = "right")
 
-ggsave(filename = here("figs", paste0("ROC_compare.pdf")),
-       plot, width = 4.5, height = 3.5)
 # ggsave(filename = here("figs", paste0("ROC_compare.pdf")),
-#        figure, width = 4, height = 6)
+#        plot, width = 4.5, height = 3.5)
+# ggsave(filename = here("figs", paste0("ROC_compare.pdf")),
+#        figure, width = 6.5, height = 2.5)
 
 

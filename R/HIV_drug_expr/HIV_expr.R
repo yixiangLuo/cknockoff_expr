@@ -17,7 +17,7 @@ if (!file.exists(here("data", "HIV", "HIV_data.Rdata"))){
 load(here("data", "HIV", "HIV_data.Rdata"))
 
 HIV_expr <- function(X, y, alphas,
-                     knockoffs = create.fixed,
+                     knockoffs = ckn.create.fixed,
                      statistic = stat.glmnet_coefdiff_lm){
   ## Log-transform the drug resistance measurements.
   y <- log(y)
@@ -43,7 +43,7 @@ HIV_expr <- function(X, y, alphas,
   
   ## process data
   Sigma <- solve(t(X) %*% X)
-  X.pack <- process_X(X, knockoffs = knockoffs)
+  X.pack <- process_X(X, knockoffs = knockoffs, intercept = T)
   knockoffs_gene <- function(X){return(X.pack$X_kn)}
   
   methods <- c("BH", "dBH", "knockoff", "cKnockoff", "cKnockoff_STAR")
