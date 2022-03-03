@@ -44,7 +44,7 @@ HIV_expr <- function(X, y, alphas,
   ## process data
   Sigma <- solve(t(X) %*% X)
   X.pack <- process_X(X, knockoffs = knockoffs, intercept = T)
-  knockoffs_gene <- function(X){return(X.pack$X_kn)}
+  knockoffs_gene <- function(X){return(X.pack$X_kn.org)}
   
   methods <- c("BH", "dBH", "knockoff", "cKnockoff", "cKnockoff_STAR")
   
@@ -71,8 +71,8 @@ HIV_expr <- function(X, y, alphas,
     # View(sort(D))
     
     # knockoff
-    y.pack <- process_y(X.pack, y)
-    kn.result <- knockoff.filter(X.pack$X, y.pack$y, knockoffs = knockoffs_gene,
+    y.data <- cknockoff:::transform_y(X.pack, y, intercept = T)
+    kn.result <- knockoff.filter(X.pack$X.org, y.data$y.org, knockoffs = knockoffs_gene,
                                  statistic = statistic, fdr = alpha)
     obj <- c(obj, list(genes[kn.result$selected]))
     

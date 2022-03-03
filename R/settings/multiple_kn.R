@@ -11,7 +11,7 @@ source(here("R", "utils.R"))
 source(here("R", "methods.R"))
 
 
-experiment <- "mkn"
+experiment <- "multiple_kn"
 
 p <- 300
 n <- 7*p
