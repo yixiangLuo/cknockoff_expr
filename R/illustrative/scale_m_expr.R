@@ -12,9 +12,11 @@ source(here("R", "utils.R"))
 source(here("R", "plot.R"))
 
 
-experiment <- "scale_expr_n7m"
+experiment <- "scale_m_expr"
 
 X_types <- c("IID_Normal", "MCC")
+posit_type <- "random"
+
 alpha <- 0.05
 p_vec <- c(100, 200, 500, 1000)
 # p_vec <- c(20, 30)
@@ -38,24 +40,25 @@ statistic <- get(statistic.name)
 runtime.result <- lapply(X_types, function(X_type){
   print(X_type)
   
-  posit_type <- "fix"
-  
   lapply(pi1_list, function(pi1_vec){
     print(pi1_vec)
     
     runtime_vec <- sapply(1:length(p_vec), function(iter){
       p <- p_vec[iter]
-      n <- 7 * p
+      n <- 3 * p
       
       print(p)
       
       n_round <- n_rounds[iter]
       
-      X <- gene_X(X_type, n, p, X_seed)
-      
       pi1 <- pi1_vec[iter]
-      mu1 <- BH_lm_calib(X, pi1, noise, posit_type, 1, side = "two", nreps = 50,
+      
+      random_X.data <- list(random_X = T,
+                            n = n, p = p, X_type = X_type, sample_num = 5)
+      mu1 <- BH_lm_calib(X = NA, random_X.data, pi1, noise,
+                         posit_type, 1, side = "two", nreps = 50,
                          alpha = target_at_alpha, target = target, n_cores = n_cores)
+      
       beta <- genmu(p, pi1, mu1, posit_type, 1)
       
       H0 <- beta == 0
@@ -66,6 +69,8 @@ runtime.result <- lapply(X_types, function(X_type){
       
       runtime <- foreach(iter = 1:n_round) %dopar% {
       # runtime <- sapply(1:n_round, function(iter){
+        
+        X <- gene_X(X_type, n, p, iter)
         
         y <- X %*% beta + eval(noise)
         
@@ -128,7 +133,7 @@ record <- list(pi1_list = pi1_list,
 save(runtime.result, record, file = here("data", paste0(experiment, ".Rdata")))
 
 
-draw_runtime_curve(experiment, X_types)
+draw_scale_m_curve(experiment, X_types)
 
 
 

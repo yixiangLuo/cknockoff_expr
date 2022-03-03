@@ -5,13 +5,19 @@ library(doParallel)
 
 
 # compute fdr and power for methods on a linear problem
-get_fdp_power <- function(X, beta, H0, mu1, beta_permutes = NA,
+get_fdp_power <- function(problem_setting, beta_permutes = NA,
                           noises = quote(rnorm(n)), alphas,
-                          fig_x_var, method_list,
+                          fig_x_var,
                           sample_size = 100, n_cores,
                           expr_name, X_title){
-    n <- NROW(X)
-    p <- NCOL(X)
+    
+    mu1 <- problem_setting$mu1
+    if(!problem_setting$random_X){
+        X <- problem_setting$X
+        method_list <- get_method_list(X, problem_setting$knockoffs,
+                                       problem_setting$statistic,
+                                       problem_setting$method_names)
+    }
 
     registerDoParallel(n_cores)
 
@@ -28,9 +34,23 @@ get_fdp_power <- function(X, beta, H0, mu1, beta_permutes = NA,
 
         results <- foreach(iter = 1:sample_size, .options.multicore = list(preschedule = F)) %dopar% {
         # results <- lapply(1:sample_size, function(iter){
-            # print(iter)
+            print(iter)
 
             set.seed(iter)
+            
+            if(problem_setting$random_X){
+                X <- gene_X(problem_setting$X_type,
+                            problem_setting$n,
+                            problem_setting$p,
+                            iter)
+                method_list <- get_method_list(X, problem_setting$knockoffs,
+                                               problem_setting$statistic,
+                                               problem_setting$method_names)
+            }
+            
+            beta <- genmu(problem_setting$p, problem_setting$pi1,
+                          mu1, problem_setting$posit_type, 1)
+            H0 <- beta == 0
           
             eval(beta_permute)
 

@@ -181,7 +181,7 @@ draw_fdp_power_dist <- function(experiment, X_types, method_names, method_colors
 }
 
 
-draw_runtime_curve <- function(experiment, X_types){
+draw_scale_m_curve <- function(experiment, X_types){
     load(here("data", paste0(experiment, ".Rdata")))
     alt_types <- c("fixed_alt", "fixed_ratio")
     runtime <- lapply(X_types, function(X_type){
@@ -233,6 +233,59 @@ draw_runtime_curve <- function(experiment, X_types){
               legend.title=element_text(size=9),
               legend.text=element_text(size=9)) +
         labs(x = "Number of Hypotheses: m", y = "Runtime (s)")
+    
+    ggsave(filename = here("figs", paste0("simu-", experiment, ".pdf")),
+           plot, width = 6, height = 5)
+    
+    return(plot)
+}
+
+draw_scale_n_curve <- function(experiment, X_types){
+    load(here("data", paste0(experiment, ".Rdata")))
+    runtime <- lapply(X_types, function(X_type){
+        runtime.result[[X_type]] %>% mutate(design_mat = str_replace(X_type, "_", "-"))
+    })
+    runtime <- do.call(rbind, runtime)
+    X_types <- str_replace(X_types, "_", "-")
+    rm(runtime.result, record)
+    
+    n_vec <- unique(runtime$n)
+    method_names <- unique(runtime$method)
+    method_colors <- unname(multi_method_color[method_names])
+    method_shapes <- unname(multi_method_shape[method_names])
+    method_names <- parse_name(method_names)
+    runtime$method <- parse_name(runtime$method)
+    
+    runtime$design_mat <- factor(runtime$design_mat)
+    
+    # temp <- sort(unique(round(runtime$time)), decreasing = T)
+    # time_ticks <- temp[1]
+    # for(ind in 1:length(temp)){
+    #     if(temp[ind] < min(time_ticks) * 0.5)
+    #         time_ticks <- c(time_ticks, temp[ind])
+    # }
+    time_ticks <- seq(0, ceiling(log(max(runtime$time), base = 4)), by = 1)
+    time_ticks <- 4^time_ticks
+    
+    plot <- ggplot(runtime) +
+        geom_line(aes(x = n, y = time, color = method)) +
+        geom_point(aes(x = n, y = time, color = method, shape = method), size = 2) +
+        facet_grid(NULL, vars(design_mat)) +
+        # scale_x_continuous(breaks = n_vec, labels = n_vec) +
+        scale_x_log10(breaks = n_vec, labels = n_vec) +
+        scale_y_log10(breaks = time_ticks, labels = time_ticks) +
+        scale_color_manual(values = method_colors, labels = method_names, breaks = method_names) +
+        scale_shape_manual(values = method_shapes, labels = method_names, breaks = method_names) +
+        theme_bw() +
+        theme(aspect.ratio = 1,
+              # panel.grid = element_blank(),
+              strip.text = element_text(size = 13),
+              axis.title = element_text(size = 11),
+              axis.text = element_text(size = 8),
+              legend.position = "right",
+              legend.title=element_text(size=9),
+              legend.text=element_text(size=9)) +
+        labs(x = "Number of data points: n", y = "Runtime (s)")
     
     ggsave(filename = here("figs", paste0("simu-", experiment, ".pdf")),
            plot, width = 6, height = 5)

@@ -36,21 +36,31 @@ results <- lapply(1:length(X_types), function(iter_i){
   X_type <- X_types[iter_i]
   posit_type <- posit_types[iter_i]
   X_title <- X_titles[iter_i]
+  random_X <- random_Xs[iter_i]
 
-  X <- gene_X(X_type, n, p, X_seed)
+  if(!random_X){
+    X <- gene_X(X_type, n, p, X_seed)
+    random_X.data <- list(random_X = random_X)
+    mu1 <- BH_lm_calib(X, random_X.data, pi1, noise = quote(rnorm(n)),
+                       posit_type, 1, side = "two", nreps = 200,
+                       alpha = target_at_alpha, target = target, n_cores = n_cores)
+  } else{
+    X <- NA
+    random_X.data <- list(random_X = random_X,
+                          n = n, p = p, X_type = X_type, sample_num = 5)
+    mu1 <- BH_lm_calib(X, random_X.data, pi1, noise = quote(rnorm(n)),
+                       posit_type, 1, side = "two", nreps = 200,
+                       alpha = target_at_alpha, target = target, n_cores = n_cores)
+  }
+  
+  problem_setting <- list(n = n, p = p, 
+                          X = X, X_type = X_type, random_X = random_X,
+                          mu1 = mu1, pi1 = pi1, posit_type = posit_type,
+                          knockoffs = knockoffs, statistic = statistic,
+                          method_names = method_names)
 
-  mu1 <- BH_lm_calib(X, pi1, noise = quote(rnorm(n)),
-                     posit_type, 1, side = "two", nreps = 200,
-                     alpha = target_at_alpha, target = target, n_cores = n_cores)
-  beta <- genmu(p, pi1, mu1, posit_type, 1)
-
-  H0 <- beta == 0
-
-  method_list <- get_method_list(X, knockoffs, statistic)[method_names]
-
-  result <- get_fdp_power(X, beta, H0, mu1, beta_permutes, noises, alphas,
-                          fig_x_var, method_list,
-                          sample_size, n_cores,
+  result <- get_fdp_power(problem_setting, beta_permutes, noises, alphas,
+                          fig_x_var, sample_size, n_cores,
                           experiment, X_title)
 
   save(result, alphas, fig_x_var,

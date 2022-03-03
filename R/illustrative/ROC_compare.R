@@ -34,7 +34,9 @@ n_cores <- 14
 
 X <- gene_X(X_type, n, p, X_seed)
 
-mu1 <- BH_lm_calib(X, pi1, noise, posit_type, 1, side = "two", nreps = 200,
+random_X.data <- list(random_X = F)
+mu1 <- BH_lm_calib(X, random_X.data, pi1, noise, posit_type, 1,
+                   side = "two", nreps = 200,
                    alpha = target_at_alpha, target = target, n_cores = n_cores)
 beta <- genmu(p, pi1, mu1, posit_type, 1)
 

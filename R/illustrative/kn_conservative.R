@@ -23,7 +23,7 @@ X_type <- "MCC_Block"
 X_seed <- 2021
 
 pi1 <- 10 / p
-posit_type <- "random"
+posit_type <- "equi"
 noise <- quote(rnorm(n))
 
 target <- 0.5
@@ -44,7 +44,9 @@ alphas <- seq(from = 0.05, to = 0.2, by = 0.05)
 X <- gene_X(X_type, n, p, X_seed)
 X.pack <- process_X(X, knockoffs = knockoffs, intercept = F)
 
-mu1 <- BH_lm_calib(X, pi1, noise, posit_type, 1, side = "two", nreps = 200,
+random_X.data <- list(random_X = F)
+mu1 <- BH_lm_calib(X, random_X.data, pi1, noise, posit_type, 1,
+                   side = "two", nreps = 200,
                    alpha = target_at_alpha, target = target, n_cores = n_cores)
 beta <- genmu(p, pi1, mu1, posit_type, 1)
 
