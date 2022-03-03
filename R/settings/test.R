@@ -13,14 +13,15 @@ source(here("R", "methods.R"))
 
 experiment <- "test"
 
-p <- 20
+p <- 100
 n <- 3*p
 
 X_seed <- 2021
 pi1 <- 10 / p
 
-X_types <- c("IID_Normal", "MCC") # "IID_Normal", "MCC", "MCC_Block", "Sparse"
-posit_types <- rep("random", length(X_types)) # , "random", "fix"
+X_types <- c("IID_Normal", "MCC", "MCC_Block") # "IID_Normal", "MCC", "MCC_Block", "Sparse"
+posit_types <- c("random", "rand_block5")[(X_types %in% c("MCC_Block"))+1]
+random_Xs <- X_types %in% c("IID_Normal")
 
 # alphas <- c(0.2)
 alphas <- c(0.01, 0.05, 0.1, 0.2)
@@ -48,15 +49,15 @@ makeup_vectors(alphas = alphas, beta_permutes = beta_permutes, noises = noises)
 target <- 0.5
 target_at_alpha <- 0.2
 
-sample_size <- 10
+sample_size <- 100
 n_cores <- 14
 
-# knockoffs <- create.fixed
-knockoffs <- create.fixed.MRC
+knockoffs <- ckn.create.fixed
 statistic <- stat.glmnet_coefdiff_lm
 
 get_method_list <- get_multi_method_list
-method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
+method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR") #, "mKnockoff"
+# method_names <- c("knockoff", "mKnockoff")
 
 X_titles <- paste0("X: ", X_types)
 

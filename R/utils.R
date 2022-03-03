@@ -66,11 +66,10 @@ gene_X <- function(X_type = "IID_Normal", n, p, X_seed = 1){
         basis <- qr.Q(qr(matrix(rnorm(n*p), n)))
         X <- basis %*% R
     } else if(X_type == "Sparse"){
+        sparsity <- 0.01
         X <- diag(1, nrow = n, ncol = p)
-        nonzeros <- matrix(NA, nrow = p, ncol = 2)
-        nonzeros[, 1] <- 1:p
-        nonzeros[, 2] <- sample(1:p, p, replace = T)
-        X[nonzeros] <- X[nonzeros] + 0.5
+        lower_tri <- lower.tri(X)
+        X[lower_tri] <- replicate(sum(lower_tri), rbinom(1, 1, sparsity))
     }
     # X <- scale(X, center = FALSE, scale = sqrt(colSums(X^2)))
 
@@ -110,34 +109,6 @@ makeup_vectors <- function(...){
     invisible()
 }
 
-get_expr_index <- function(expr_id, index_data){
-  X_chunk_size <- index_data$fig_x_len * index_data$sample_len
-  
-  X_index <- (expr_id-1) %/% X_chunk_size + 1
-  
-  fig_x_index <- (expr_id-1) %% X_chunk_size + 1
-  fig_x_index <- (fig_x_index-1) %/% index_data$sample_len + 1
-  
-  y_index <- (expr_id-1) %% index_data$sample_len + 1
-  
-  return(list(X_index = X_index, fig_x_index = fig_x_index,
-              y_index = y_index, expr_id = expr_id))
-}
-
-get_data_indeces <- function(job_id, index_data){
-  expr_num <- index_data$X_len * index_data$fig_x_len * index_data$sample_len
-  exprs_per_job <- ceiling(expr_num / index_data$n_jobs)
-  
-  job_exprs <- ((job_id-1) * exprs_per_job + 1) : (job_id * exprs_per_job)
-  job_exprs <- job_exprs[job_exprs <= expr_num]
-  
-  job_expr_indeces <- lapply(job_exprs, function(expr_id){
-    get_expr_index(expr_id, index_data)
-  })
-  
-  return(job_expr_indeces)
-}
-
 
 calc_FDP_power <- function(rejs, H0, sign_predict = NULL, sign_beta = NULL){
     nrejs <- length(rejs)
@@ -164,18 +135,34 @@ calc_FDP_power <- function(rejs, H0, sign_predict = NULL, sign_beta = NULL){
 
 
 ## calibrate signal strength, modified from Lihua
-BH_lm_calib <- function(X, pi1, noise = quote(rnorm(n)),
+BH_lm_calib <- function(X, random_X.data,
+                        pi1, noise = quote(rnorm(n)),
                         mu_posit_type, mu_size_type,
                         side,
-                        nreps = 1000,
+                        nreps = 200,
                         alpha = 0.05,
                         target = 0.3,
                         n_cores = 7){
-    n <- nrow(X)
-    p <- ncol(X)
-    Sigma <- solve(t(X) %*% X)
-    H <- X %*% Sigma %*% t(X)
-    df <- n - p
+    if(!random_X.data$random_X){
+        n <- nrow(X)
+        p <- ncol(X)
+    } else{
+        n <- random_X.data$n
+        p <- random_X.data$p
+    }
+    
+    if(!random_X.data$random_X){
+        X_list <- list(X)
+        Sigma_list <- list(solve(t(X) %*% X))
+    } else{
+        X_list <- lapply(1:random_X.data$sample_num, function(i){
+            gene_X(random_X.data$X_type, n, p, i)
+        })
+        Sigma_list <- lapply(X_list, function(X){
+            solve(t(X) %*% X)
+        })
+    }
+    X_sample_num <- length(X_list)
     
     beta_list <- lapply(1:nreps, function(i){
         beta <- genmu(p, pi1, 1, mu_posit_type, mu_size_type)
@@ -197,6 +184,10 @@ BH_lm_calib <- function(X, pi1, noise = quote(rnorm(n)),
             H0 <- beta_list[[i]] == 0            
             beta <- beta_list[[i]] * mu1
             eps <- eps_list[[i]]
+            
+            X <- X_list[[(i%%X_sample_num)+1]]
+            Sigma <- Sigma_list[[(i%%X_sample_num)+1]]
+            
             y <- X %*% beta + eps
             
             rejs_BH <- BH_lm(y, X, side = "two", alpha, Sigma = Sigma)$rejs
@@ -221,14 +212,21 @@ BH_lm_calib <- function(X, pi1, noise = quote(rnorm(n)),
 }
 
 genmu <- function(n, pi1, mu1,
-                  posit_type = c("random", "fix"),
+                  posit_type = c("random", "rand_block5", "equi", "head"),
                   mu_type = 1:3){
     m <- ceiling(n * pi1)
     posit_type <- posit_type[1]
     mu_type <- mu_type[1]
     if (posit_type == "random"){
+        inds <- sample(n, m, replace = F)
+    } else if (posit_type == "rand_block5"){
+        block_size <- 5
+        if(n %% block_size != 0) stop("#variables not a multiple of block size 5")
+        if(m > n/block_size) stop("#non-null is greater than #blocks")
+        inds <- (sample(n/block_size, m, replace = F) - 1) * block_size + 1
+    } else if (posit_type == "equi"){
         inds <- seq(1, n, floor(1 / pi1))[1:m]
-    } else if (posit_type == "fix"){
+    } else if (posit_type == "head"){
         inds <- 1:m
     }
     mu <- rep(0, n)

@@ -1,3 +1,5 @@
+source(here("R", "multi_knockoff.R"))
+
 
 # weighted BH method
 BH_weighted <- function(pvals, alpha,
@@ -56,7 +58,7 @@ BH_lm <- function(y, X, side = "two", alpha,
     return(BH_result)
 }
 
-precompute_BonfBH_X <- function(X, knockoffs = knockoff::create.fixed){
+precompute_BonfBH_X <- function(X, knockoffs = ckn.create.fixed){
     knockoff <- knockoffs(X)
     X <- knockoff$X
     X_kn <- knockoff$Xk
@@ -105,178 +107,178 @@ BonfBH <- function(X, y, alpha, BonfBH_X = NULL){
 
 
 
-process_y <- function(X.pack, y, randomize = F){
-
-    n <- NROW(X.pack$X)
-    p <- NCOL(X.pack$X)
-    df <- n-p
-
-    y.org.nrow <- length(y)
-
-    y <- matrix(y, nrow = 1)
-    y_Pi_X <- X.pack$X_basis %*% t(y %*% X.pack$X_basis[1:y.org.nrow, ])
-    y_Pi_X_res_norm2 <- sum(y^2) - sum(y_Pi_X^2)
-
-    if(y.org.nrow < 2*p){
-        if(randomize){
-            y.extra <- rnorm(2*p-y.org.nrow,
-                             sd = sqrt(y_Pi_X_res_norm2 / (X.pack$X.org.nrow - p)))
-        } else{
-            y.extra <- with_seed(0, rnorm(2*p-y.org.nrow,
-                                          sd = sqrt(y_Pi_X_res_norm2 / (X.pack$X.org.nrow - p))))
-        }
-        y <- c(y, y.extra)
+get_multi_method_list <- function(X, knockoffs, statistic, method_names){
+    
+    methods <- list()
+    
+    # preprocess if needed
+    if("BH" %in% method_names | "dBH" %in% method_names){
+        Sigma <- solve(t(X) %*% X)
     }
-    if(y.org.nrow < 2*p+1){
-        y <- c(y, sqrt(y_Pi_X_res_norm2 / (X.pack$X.org.nrow - p)))
+    if("knockoff" %in% method_names | "cKnockoff" %in% method_names | 
+       "cKnockoff_STAR" %in% method_names){
+        X.pack <- process_X(X, knockoffs = knockoffs, intercept = F)
     }
-    y_Pi_X_res_norm2 <- sum(y^2) - sum(y_Pi_X^2)
-
-    y <- matrix(y, nrow = 1)
-
-
-    vjy_obs <- c(y %*% X.pack$vj_mat)
-
-    y_Pi_Xnoj <- sapply(1:p, function(j){
-        y_Pi_X - X.pack$vj_mat[, j] * vjy_obs[j]
-    })
-
-    y_Pi_Xnoj_res_norm2 <- y_Pi_X_res_norm2 + vjy_obs^2
-    sigmahat_XXk_res <- sqrt((y_Pi_X_res_norm2 - sum((y %*% X.pack$X_res_Xk_basis)^2)) / (n - 2*p))
-
-    return(list(n = n, p = p, df = df, y = as.vector(y), vjy_obs = vjy_obs,
-                y_Pi_X_res_norm2 = y_Pi_X_res_norm2, y_Pi_Xnoj_res_norm2 = y_Pi_Xnoj_res_norm2,
-                sigmahat_XXk_res = sigmahat_XXk_res,
-                y_Pi_Xnoj = y_Pi_Xnoj))
-}
-
-
-get_multi_method_list <- function(X, knockoffs, statistic){
-    n <- NROW(X)
-    p <- NCOL(X)
-
-    Sigma <- solve(t(X) %*% X)
-    X.pack <- process_X(X, knockoffs = knockoffs)
-    if(n > 2*p){
+    if("BonBH" %in% method_names){
         BonfBH_X <- precompute_BonfBH_X(X)
-    } else{
-        BonfBH_X <- NA
-        warning('Input X has dimensions n < 2p+1. ',
-                'Cannot use BonfBH.', immediate.=T)
     }
-
-    methods <- list(
-        BH = function(y, X, alpha){
-            # result <- BH_lm(y, X, side = "two", alpha, Sigma = Sigma)
-
+    if("mKnockoff" %in% method_names){
+        mkn_k <- 5
+        n <- NROW(X)
+        p <- NCOL(X)
+        
+        if(n > mkn_k * p){
+            mkn_X.pack <- create.mkn(X, mkn_k)
+        }
+    }
+    
+    # create method functions
+    if("BH" %in% method_names){
+        methods$BH <- function(y, X, alpha){
+            # result <- BH_lm(y, X, side = "two", alpha = alpha, Sigma = Sigma)
+            
             t_result <- lm_to_t(y, X, Sigma)
             pvals <- pvals_t(t_result$tvals, t_result$df, side = "two")
             result <-  BH_weighted(pvals, alpha)
-
+            
             sign_predict <- rep(0, NCOL(X))
             sign_predict[result$rejs] <- sign(t_result$tvals[result$rejs])
-
+            
             return(list(selected = result$rejs, sign_predict = sign_predict))
-        },
-        dBH = function(y, X, alpha){
+        }
+    }
+    if("dBH" %in% method_names){
+        methods$dBH <- function(y, X, alpha){
             result <- dBH_lm(y, X, intercept = FALSE, side = "two",
                              alpha = alpha, gamma = 0.9, niter = 1,
                              avals_type = "BH", qcap = 2)
-
+            
             t_result <- lm_to_t(y, X, Sigma)
             sign_predict <- rep(0, NCOL(X))
             sign_predict[result$rejs] <- sign(t_result$tvals[result$rejs])
-
+            
             return(list(selected = result$rejs, sign_predict = sign_predict))
-        },
-        knockoff = function(y, X, alpha){
-            y.pack <- process_y(X.pack, y)
-            y <- y.pack$y
-            sigma_tilde <- y.pack$sigmahat_XXk_res
-
-            kn_stats_obs <- statistic(X.pack$X, X.pack$X_kn, y, sigma_tilde = sigma_tilde)
-
-            result <- kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
-            sign_predict <- sign(c(matrix(y, nrow = 1) %*% (X.pack$X - X.pack$X_kn)))
-
+        }
+    }
+    if("knockoff" %in% method_names){
+        methods$knockoff <- function(y, X, alpha){
+            y.pack <- cknockoff:::transform_y(X.pack, y, intercept = F)
+            sigma_tilde <- sqrt(y.pack$RSS_XXk / y.pack$df_XXk)
+            
+            kn_stats_obs <- statistic(X.pack$X.org, X.pack$X_kn.org,
+                                      y.pack$y.org, sigma_tilde = sigma_tilde)
+            
+            result <- cknockoff:::kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
+            sign_predict <- sign(c(matrix(y.pack$y.org, nrow = 1) %*% 
+                                       (X.pack$X.org - X.pack$X_kn.org)))
+            
             return(list(selected = result$selected, sign_predict = sign_predict))
-        },
-        BonBH = function(y, X, alpha){
+        }
+    }
+    if("mKnockoff" %in% method_names){
+        if(n > mkn_k * p){
+            methods$mKnockoff <- function(y, X, alpha){
+                sigma_tilde <- sqrt((sum((matrix(y, nrow = 1) %*% mkn_X.pack$res_basis)^2)) / (n - (mkn_k+1)*p))
+                
+                scores <- score.glmnet_coefdiff_lm(mkn_X.pack$X, mkn_X.pack$Xk, y, sigma_tilde)
+                
+                result <- mkn.select(scores$order_stats, scores$org_ranks, mkn_k, alpha)
+                sign_predict <- rep(NA, NCOL(X))
+                
+                return(list(selected = result$selected, sign_predict = sign_predict))
+            }
+        } else{
+            methods$mKnockoff <- function(y, X, alpha){
+                return(list(selected = NULL, sign_predict = NULL))
+            }
+        }
+        
+    }
+    if("BonBH" %in% method_names){
+        methods$BonBH <- function(y, X, alpha){
             result <- BonfBH(X, y, alpha, BonfBH_X = BonfBH_X)
             return(list(selected = result$rejs))
-        },
-        cKnockoff = function(y, X, alpha){
+        }
+    }
+    if("cKnockoff" %in% method_names){
+        methods$cKnockoff <- function(y, X, alpha){
             result <- cknockoff(X, y,
+                                intercept = F,
                                 statistic = statistic,
                                 alpha = alpha,
-                                Rhat_refine = F,
                                 n_cores = 1,
-                                X.pack = X.pack)
-            return(list(selected = result$selected, sign_predict = result$sign_predict))
-        },
-        cKnockoff_STAR = function(y, X, alpha){
-            result <- cknockoff(X, y,
-                                statistic = statistic,
-                                alpha = alpha,
-                                Rhat_refine = T,
-                                n_cores = 1,
-                                X.pack = X.pack)
+                                X.pack = X.pack,
+                                Rstar_refine = F)
             return(list(selected = result$selected, sign_predict = result$sign_predict))
         }
-    )
+    }
+    if("cKnockoff_STAR" %in% method_names){
+        methods$cKnockoff_STAR <- function(y, X, alpha){
+            result <- cknockoff(X, y,
+                                intercept = F,
+                                statistic = statistic,
+                                alpha = alpha,
+                                n_cores = 1,
+                                X.pack = X.pack,
+                                Rstar_refine = T)
+            return(list(selected = result$selected, sign_predict = result$sign_predict))
+        }
+    }
 
     return(methods)
 }
 
-multi_method_color <- c("#984ea3", "dodgerblue3", "#333333", "#33a02c", "red", "orange1")
-names(multi_method_color) <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
+multi_method_color <- c("#984ea3", "dodgerblue3", "#333333", "#006d2c", "#33a02c", "red", "orange1")
+names(multi_method_color) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
 
-multi_method_shape <- c(3, 4, 17, 23, 19, 15)
-names(multi_method_shape) <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
+multi_method_shape <- c(3, 4, 17, 6, 23, 19, 15)
+names(multi_method_shape) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
 
 
-get_kn_method_list <- function(X, knockoffs, statistic){
-    X.pack <- process_X(X, knockoffs = knockoffs)
+get_kn_method_list <- function(X, knockoffs, statistic, method_names){
+    X.pack <- process_X(X, knockoffs = knockoffs, intercept = F)
     knockoffs_gene <- function(X){return(X.pack$X_kn)}
 
     methods <- list(
         kn_D_lambdasmax = function(y, X, alpha){
-            y.pack <- process_y(X.pack, y)
-            y <- y.pack$y
+            y.pack <- cknockoff:::transform_y(X.pack, y, intercept = F)
 
-            result <- knockoff.filter(X.pack$X, y, knockoffs = knockoffs_gene,
+            result <- knockoff.filter(X.pack$X.org, y.pack$y.org, knockoffs = knockoffs_gene,
                                       statistic = stat.glmnet_lambdasmax, fdr = alpha)
-            sign_predict <- sign(c(matrix(y, nrow = 1) %*% (X.pack$X - X.pack$X_kn)))
+            sign_predict <- sign(c(matrix(y.pack$y.org, nrow = 1) %*% 
+                                       (X.pack$X.org - X.pack$X_kn.org)))
 
             return(list(selected = result$selected, sign_predict = sign_predict))
         },
         kn_D_lambdasmax_lm = function(y, X, alpha){
-            y.pack <- process_y(X.pack, y)
-            y <- y.pack$y
-            sigma_tilde <- y.pack$sigmahat_XXk_res
+            y.pack <- cknockoff:::transform_y(X.pack, y, intercept = F)
+            sigma_tilde <- sqrt(y.pack$RSS_XXk / y.pack$df_XXk)
 
-            kn_stats_obs <- stat.glmnet_lambdasmax_lm(X.pack$X, X.pack$X_kn, y, sigma_tilde = sigma_tilde)
+            kn_stats_obs <- stat.glmnet_lambdasmax_lm(X.pack$X.org, X.pack$X_kn.org,
+                                                      y.pack$y.org, sigma_tilde = sigma_tilde)
 
-            result <- kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
-            sign_predict <- sign(c(matrix(y, nrow = 1) %*% (X.pack$X - X.pack$X_kn)))
+            result <- cknockoff:::kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
+            sign_predict <- sign(c(matrix(y.pack$y.org, nrow = 1) %*% 
+                                       (X.pack$X.org - X.pack$X_kn.org)))
 
             return(list(selected = result$selected, sign_predict = sign_predict))
         },
         kn_D_coefdiff_lm = function(y, X, alpha){
-            y.pack <- process_y(X.pack, y)
-            y <- y.pack$y
-            sigma_tilde <- y.pack$sigmahat_XXk_res
+            y.pack <- cknockoff:::transform_y(X.pack, y, intercept = F)
+            sigma_tilde <- sqrt(y.pack$RSS_XXk / y.pack$df_XXk)
 
-            kn_stats_obs <- stat.glmnet_coefdiff_lm(X.pack$X, X.pack$X_kn, y, sigma_tilde = sigma_tilde)
+            kn_stats_obs <- stat.glmnet_coefdiff_lm(X.pack$X.org, X.pack$X_kn.org,
+                                                    y.pack$y.org, sigma_tilde = sigma_tilde)
 
-            result <- kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
-            sign_predict <- sign(c(matrix(y, nrow = 1) %*% (X.pack$X - X.pack$X_kn)))
+            result <- cknockoff:::kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
+            sign_predict <- sign(c(matrix(y.pack$y.org, nrow = 1) %*% 
+                                       (X.pack$X.org - X.pack$X_kn.org)))
 
             return(list(selected = result$selected, sign_predict = sign_predict))
         }
     )
 
-    return(methods)
+    return(methods[method_names])
 }
 
 

@@ -2,6 +2,7 @@ library(here)
 library(abind)
 
 source(here("R", "utils.R"))
+source(here("R", "cluster_utils.R"))
 source(here("R", "plot.R"))
 
 # read cmd args
@@ -16,40 +17,27 @@ if (length(args) == 1) {
 source(here("R", "settings", paste0(experiment, ".R")))
 load(here("data", "temp", experiment, "settings.Rdata"))
 
+# record computed result in the data structure
 expr_num <- index_data$X_len * index_data$fig_x_len * index_data$sample_len
 for(expr_id in 1:expr_num){
     expr_index <- get_expr_index(expr_id, index_data)
     
     load(here("data", "temp", experiment, paste0(expr_index$expr_id, ".Rdata")))
-    y_data[[expr_index$X_index]][[expr_index$fig_x_index]]$data[[expr_index$y_index]]$result <- expr_result
+    y_data[[expr_index$X_index]][[expr_index$fig_x_index]]$data[[expr_index$y_index]]$fdp_power <- fdp_power
 }
 
 X_results <- lapply(1:index_data$X_len, function(X_iter){
-    H0 <- X_data[[X_iter]]$H0
     
     org_data <- list()
     FDR_Power <- NULL
     
     for(var_i in 1:index_data$fig_x_len){
         fig_x_value <- fig_x_var$value[var_i]
-        alpha <- y_data[[X_iter]][[var_i]]$alpha
+        alpha <- alphas[[var_i]]
         data <- y_data[[X_iter]][[var_i]]$data
         
         results <- lapply(1:sample_size, function(iter){
-            sign_beta <- sign(data[[iter]]$beta)
-            
-            fdp_power <- NULL
-            method_names <- NULL
-            
-            for(method_res in data[[iter]]$result){
-                method_fdp_power <- calc_FDP_power(method_res$selected, H0,
-                                                   method_res$sign_predict, sign_beta)
-                fdp_power <- cbind(fdp_power, method_fdp_power)
-            }
-            
-            colnames(fdp_power) <- method_names
-            
-            return(fdp_power)
+            data[[iter]]$fdp_power
         })
         
         results <- abind(results, along=3)

@@ -4,6 +4,7 @@ library(here)
 
 source(here("R", "methods.R"))
 source(here("R", "utils.R"))
+source(here("R", "cluster_utils.R"))
 
 # source(here("R", "settings", "test.R"))
 
@@ -18,37 +19,48 @@ if (length(args) == 2) {
 X_data <- list()
 y_data <- list()
 
+# create data for each experiment to access
 for(X_iter in 1:length(X_types)){
   X_type <- X_types[X_iter]
   posit_type <- posit_types[X_iter]
-  X_title <- X_titles[X_iter]
+  random_X <- random_Xs[X_iter]
   
-  X <- gene_X(X_type, n, p, X_seed)
+  if(!random_X){
+    X <- gene_X(X_type, n, p, X_seed)
+    
+    random_X.data <- list(random_X = random_X)
+    mu1 <- BH_lm_calib(X, random_X.data, pi1, noise = quote(rnorm(n)),
+                       posit_type, 1, side = "two", nreps = 200,
+                       alpha = target_at_alpha, target = target, n_cores = n_cores)
+    
+    method_list <- get_method_list(X, knockoffs, statistic, method_names)
+  } else{
+    X <- NA
+    
+    random_X.data <- list(random_X = random_X,
+                          n = n, p = p, X_type = X_type, sample_num = 5)
+    mu1 <- BH_lm_calib(X, random_X.data, pi1, noise = quote(rnorm(n)),
+                       posit_type, 1, side = "two", nreps = 200,
+                       alpha = target_at_alpha, target = target, n_cores = n_cores)
+    
+    method_list <- NA
+  }
   
-  mu1 <- BH_lm_calib(X, pi1, noise = quote(rnorm(n)),
-                     posit_type, 1, side = "two", nreps = 200,
-                     alpha = target_at_alpha, target = target, n_cores = n_cores)
-  beta <- genmu(p, pi1, mu1, posit_type, 1)
+  setting <- list(n = n, p = p, 
+                  X = X, X_type = X_type, random_X = random_X,
+                  mu1 = mu1, pi1 = pi1, posit_type = posit_type,
+                  knockoffs = knockoffs, statistic = statistic,
+                  method_names = method_names, method_list = method_list,
+                  fig_x_var = fig_x_var, alphas = alphas,
+                  beta_permutes = beta_permutes, noises = noises)
   
-  H0 <- beta == 0
-  
-  method_list <- get_method_list(X, knockoffs, statistic)[method_names]
-  
-  X_data[[X_iter]] <- list(X = X, beta = beta, H0 = H0, method_list = method_list)
+  X_data[[X_iter]] <- setting
   
   y_data[[X_iter]] <- list()
   for(var_i in 1:length(fig_x_var$value)){
-    fig_x_value <- fig_x_var$value[var_i]
-    alpha <- alphas[[var_i]]
-    beta_permute <- beta_permutes[[var_i]]
-    noise <- noises[[var_i]]
-    
-    y_data[[X_iter]][[var_i]] <- list(alpha = alpha, data = list())
+    y_data[[X_iter]][[var_i]] <- list(data = list())
     for(iter in 1:sample_size){
-      eval(beta_permute)
-      y <- X %*% beta + eval(noise)
-      
-      y_data[[X_iter]][[var_i]]$data[[iter]] <- list(y = y, beta = beta)
+      y_data[[X_iter]][[var_i]]$data[[iter]] <- list()
     }
   }
 }
@@ -56,11 +68,12 @@ for(X_iter in 1:length(X_types)){
 names(X_data) <- X_types
 names(y_data) <- X_types
 
-
+# info used to get the index of the data record for each experiment
 index_data <- list(X_len = length(X_types), fig_x_len = length(fig_x_var$value),
                    sample_len = sample_size, n_jobs = n_jobs)
 expr_num <- length(X_types) * length(fig_x_var$value) * sample_size
 
+# prepare directories to store the data
 unlink(here("data", "temp", experiment), recursive = TRUE) 
 dir.create(here("data", "temp", experiment), showWarnings = F)
 dir.create(here("data", "temp", experiment, "progress"), showWarnings = F)

@@ -1,5 +1,7 @@
 library(here)
 
+source(here("R", "cluster_utils.R"))
+
 # read cmd args
 args <- commandArgs(trailingOnly=TRUE)
 if (length(args) == 2) {
@@ -24,18 +26,6 @@ for(X_iter in 1:index_data$X_len){
   if(!(X_iter %in% sapply(job_expr_indeces, function(ind){ind$X_index}))){
     X_data[[X_iter]] <- NA
     y_data[[X_iter]] <- NA
-  } else{
-    for(var_i in 1:index_data$fig_x_len){
-      if(!(var_i %in% sapply(job_expr_indeces, function(ind){ind$fig_x_index}))){
-        y_data[[X_iter]][[var_i]] <- NA
-      } else{
-        for(iter in 1:index_data$sample_len){
-          if(!(iter %in% sapply(job_expr_indeces, function(ind){ind$y_index}))){
-            y_data[[X_iter]][[var_i]]$data[[iter]] <- NA
-          }
-        }
-      }
-    }
   }
 }
 
@@ -44,19 +34,46 @@ for(expr_index in job_expr_indeces){
   # record the start of the program
   cat(as.integer(Sys.time()),
       file = here("data", "temp", experiment, "progress", expr_index$expr_id))
+    
+  set.seed(expr_index$expr_id)
   
-  X <- X_data[[expr_index$X_index]]$X
-  method_list <- X_data[[expr_index$X_index]]$method_list
+  setting <- X_data[[expr_index$X_index]]
+  if(setting$random_X){
+      X <- gene_X(setting$X_type, setting$n, setting$p, expr_index$expr_id)
+      method_list <- get_method_list(X, setting$knockoffs, setting$statistic,
+                                     setting$method_names)
+  } else{
+      X <- setting$X
+      method_list <- setting$method_list
+  }
   
-  alpha <- y_data[[expr_index$X_index]][[expr_index$fig_x_index]]$alpha
-  y <- y_data[[expr_index$X_index]][[expr_index$fig_x_index]]$data[[expr_index$y_index]]$y
+  beta <- genmu(setting$p, setting$pi1, setting$mu1, setting$posit_type, 1)
+  H0 <- beta == 0
   
-  expr_result <- lapply(method_list, function(method){
-    method(y, X, alpha)
-  })
+  alpha <- setting$alphas[[expr_index$fig_x_index]]
+  beta_permute <- setting$beta_permutes[[expr_index$fig_x_index]]
+  noise <- setting$noises[[expr_index$fig_x_index]]
+  
+  eval(beta_permute)
+  sign_beta <- sign(beta)
+  
+  y <- X %*% beta + eval(noise)
+
+  fdp_power <- NULL
+  method_names <- NULL
+  
+  for(method_i in 1:length(method_list)){
+      method_res <- method_list[[method_i]](y, X, alpha)
+      method_fdp_power <- calc_FDP_power(method_res$selected, H0,
+                                         method_res$sign_predict, sign_beta)
+      fdp_power <- cbind(fdp_power, method_fdp_power)
+      method_names <- c(method_names, names(method_list[method_i]))
+  }
+  
+  colnames(fdp_power) <- method_names
   
   # save results
-  save(expr_result,
+  save(fdp_power,
        file = here("data", "temp", experiment, paste0(expr_index$expr_id, ".Rdata")))
   
   # delete the "in-progress" record
