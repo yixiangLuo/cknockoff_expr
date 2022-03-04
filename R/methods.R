@@ -162,14 +162,14 @@ get_multi_method_list <- function(X, knockoffs, statistic, method_names){
     }
     if("knockoff" %in% method_names){
         methods$knockoff <- function(y, X, alpha){
-            y.pack <- cknockoff:::transform_y(X.pack, y, intercept = F)
-            sigma_tilde <- sqrt(y.pack$RSS_XXk / y.pack$df_XXk)
+            y.data <- cknockoff:::transform_y(X.pack, y, intercept = F)
+            sigma_tilde <- sqrt(y.data$RSS_XXk / y.data$df_XXk)
             
             kn_stats_obs <- statistic(X.pack$X.org, X.pack$X_kn.org,
-                                      y.pack$y.org, sigma_tilde = sigma_tilde)
+                                      y.data$y.org, sigma_tilde = sigma_tilde)
             
             result <- cknockoff:::kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
-            sign_predict <- sign(c(matrix(y.pack$y.org, nrow = 1) %*% 
+            sign_predict <- sign(c(matrix(y.data$y.org, nrow = 1) %*% 
                                        (X.pack$X.org - X.pack$X_kn.org)))
             
             return(list(selected = result$selected, sign_predict = sign_predict))
@@ -241,37 +241,37 @@ get_kn_method_list <- function(X, knockoffs, statistic, method_names){
 
     methods <- list(
         kn_D_lambdasmax = function(y, X, alpha){
-            y.pack <- cknockoff:::transform_y(X.pack, y, intercept = F)
+            y.data <- cknockoff:::transform_y(X.pack, y, intercept = F)
 
-            result <- knockoff.filter(X.pack$X.org, y.pack$y.org, knockoffs = knockoffs_gene,
+            result <- knockoff.filter(X.pack$X.org, y.data$y.org, knockoffs = knockoffs_gene,
                                       statistic = stat.glmnet_lambdasmax, fdr = alpha)
-            sign_predict <- sign(c(matrix(y.pack$y.org, nrow = 1) %*% 
+            sign_predict <- sign(c(matrix(y.data$y.org, nrow = 1) %*% 
                                        (X.pack$X.org - X.pack$X_kn.org)))
 
             return(list(selected = result$selected, sign_predict = sign_predict))
         },
         kn_D_lambdasmax_lm = function(y, X, alpha){
-            y.pack <- cknockoff:::transform_y(X.pack, y, intercept = F)
-            sigma_tilde <- sqrt(y.pack$RSS_XXk / y.pack$df_XXk)
+            y.data <- cknockoff:::transform_y(X.pack, y, intercept = F)
+            sigma_tilde <- sqrt(y.data$RSS_XXk / y.data$df_XXk)
 
             kn_stats_obs <- stat.glmnet_lambdasmax_lm(X.pack$X.org, X.pack$X_kn.org,
-                                                      y.pack$y.org, sigma_tilde = sigma_tilde)
+                                                      y.data$y.org, sigma_tilde = sigma_tilde)
 
             result <- cknockoff:::kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
-            sign_predict <- sign(c(matrix(y.pack$y.org, nrow = 1) %*% 
+            sign_predict <- sign(c(matrix(y.data$y.org, nrow = 1) %*% 
                                        (X.pack$X.org - X.pack$X_kn.org)))
 
             return(list(selected = result$selected, sign_predict = sign_predict))
         },
         kn_D_coefdiff_lm = function(y, X, alpha){
-            y.pack <- cknockoff:::transform_y(X.pack, y, intercept = F)
-            sigma_tilde <- sqrt(y.pack$RSS_XXk / y.pack$df_XXk)
+            y.data <- cknockoff:::transform_y(X.pack, y, intercept = F)
+            sigma_tilde <- sqrt(y.data$RSS_XXk / y.data$df_XXk)
 
             kn_stats_obs <- stat.glmnet_coefdiff_lm(X.pack$X.org, X.pack$X_kn.org,
-                                                    y.pack$y.org, sigma_tilde = sigma_tilde)
+                                                    y.data$y.org, sigma_tilde = sigma_tilde)
 
             result <- cknockoff:::kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
-            sign_predict <- sign(c(matrix(y.pack$y.org, nrow = 1) %*% 
+            sign_predict <- sign(c(matrix(y.data$y.org, nrow = 1) %*% 
                                        (X.pack$X.org - X.pack$X_kn.org)))
 
             return(list(selected = result$selected, sign_predict = sign_predict))
