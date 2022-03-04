@@ -20,7 +20,8 @@ X_seed <- 2021
 pi1 <- 10 / p
 
 X_types <- c("IID_Normal", "MCC", "MCC_Block") # "IID_Normal", "MCC", "MCC_Block", "Sparse"
-posit_types <- c("random", "rand_block5")[(X_types %in% c("MCC_Block"))+1]
+# posit_types <- c("random", "rand_block5")[(X_types %in% c("MCC_Block"))+1]
+posit_types <- rep("random", length(X_types))
 random_Xs <- X_types %in% c("IID_Normal")
 
 # alphas <- c(0.2)
