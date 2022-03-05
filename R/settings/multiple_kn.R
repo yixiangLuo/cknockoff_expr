@@ -17,7 +17,7 @@ p <- 300
 n <- 7*p
 
 X_seed <- 2021
-pi1 <- 20 / p
+pi1 <- 30 / p
 
 X_types <- c("IID_Normal", "MCC", "MCC_Block")
 posit_types <- rep("random", length(X_types))
