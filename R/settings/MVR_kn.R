@@ -12,7 +12,7 @@ source(here("R", "methods.R"))
 
 experiment <- "MVR_kn"
 
-p <- 1000
+p <- 300
 n <- 3*p
 
 X_seed <- 2021
