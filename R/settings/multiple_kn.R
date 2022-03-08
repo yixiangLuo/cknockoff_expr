@@ -13,7 +13,7 @@ source(here("R", "methods.R"))
 
 experiment <- "multiple_kn"
 
-p <- 300
+p <- 1000
 n <- 7*p
 
 X_seed <- 2021
