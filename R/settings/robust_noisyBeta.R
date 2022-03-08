@@ -13,7 +13,7 @@ source(here("R", "methods.R"))
 
 experiment <- "robust_noisyBeta"
 
-p <- 1000
+p <- 300
 n <- 3*p
 
 X_seed <- 2021
