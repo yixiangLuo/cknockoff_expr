@@ -19,7 +19,7 @@ n <- 3*p
 X_seed <- 2021
 pi1 <- 50 / p
 
-X_types <- c("IID_Normal", "MCC", "MCC_Block", "Coef_AR", "X_AR")
+X_types <- c("IID_Normal", "MCC", "MCC_Block")
 posit_types <- rep("random", length(X_types))
 random_Xs <- X_types %in% c("IID_Normal")
 
