@@ -82,7 +82,7 @@ HIV_expr <- function(X, y, alphas,
     obj <- c(obj, list(genes[ckn.result$selected]))
     
     # cKnockoff*
-    ckn_star.result <- cknockoff(prelim_result = ckn.result, Rhat_refine = T,
+    ckn_star.result <- cknockoff(prelim_result = ckn.result, Rstar_refine = T,
                                  n_cores = 14, X.pack = X.pack)
     obj <- c(obj, list(genes[ckn_star.result$selected]))
     

@@ -33,23 +33,21 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
 
     ref_prototype <- data.frame(fig_x = c(fig_x_var$value, fig_x_var$value),
                                 threshold = c(unlist(alphas), rep(NA, length(fig_x_var$value))),
-                                type = rep(c("FDR", "Power"), each = length(fig_x_var$value)))
+                                type = rep(c("FDR", "TPR"), each = length(fig_x_var$value)))
     reference <- lapply(X_types, function(X_type){
         ref_prototype %>% mutate(design_mat = X_type)
     })
     reference <- do.call(rbind, reference)
     
-    if(error_bar){
-        add_error_bar <- quote(
+    add_error_bar <- if(error_bar){
+        quote(
             geom_errorbar(aes(x = fig_x, y = mean,
                               ymin = mean-2*std/sqrt(sample_size),
                               ymax = mean+2*std/sqrt(sample_size),
                               color = methods), width=0.05,
                           position = position_dodge(width=0.01))
         )
-    } else{
-        add_error_bar <- NULL
-    }
+    } else{ NULL }
     
     if(fig_x_var$value[1] <= fig_x_var$value[length(fig_x_var$value)]){
         set_x_axis <- scale_x_continuous
@@ -64,7 +62,7 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
         geom_line(data = reference, aes(x = fig_x, y = threshold),
                   linetype = "longdash", alpha = 0.6, na.rm = T) +
         facet_grid(vars(factor(design_mat, levels = X_types)),
-                   vars(factor(type, levels = c("FDR", "Power"))), scales="free") +
+                   vars(factor(type, levels = c("FDR", "TPR"))), scales="free") +
         # facet_wrap(vars(factor(design_mat, levels = X_types), factor(type, levels = c("FDR", "Power"))),
         #            ncol = 2, scales="free_y") +
         set_x_axis(breaks = fig_x_var$value, labels = fig_x_var$value) +
@@ -79,7 +77,7 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
               legend.position = "right",
               legend.title=element_text(size=9),
               legend.text=element_text(size=9)) +
-        labs(x = fig_x_var$name, y = "Estimated FDR/Power")
+        labs(x = fig_x_var$name, y = "Estimated FDR/TPR")
 
     ggsave(filename = here("figs", paste0("simu-", experiment, ".pdf")),
            plot, width = 7, height = 2*(length(X_types)+1))
@@ -137,6 +135,13 @@ draw_fdp_power_dist <- function(experiment, X_types, method_names, method_colors
     
     method_names <- parse_name(method_names)
     
+    FDR_level_line <- if(type == "FDP"){
+        quote(
+            geom_vline(aes(xintercept = fig_x), 
+                       linetype = "dashed", color = "grey")
+        )
+    } else{ NULL }
+    
     if(figure == "hist"){
         plot <- ggplot(plot_data) +
             geom_histogram(aes(x = value, fill = methods, color = methods),
@@ -158,8 +163,9 @@ draw_fdp_power_dist <- function(experiment, X_types, method_names, method_colors
     } else{
         plot <- ggplot(plot_data) +
             geom_line(aes(x = ecdf_x, y = value, color = methods)) +
+            eval(FDR_level_line) +
             facet_grid(vars(factor(design_mat, levels = X_types)),
-                       vars(factor(fig_x, levels = fig_x_var$value)), scales="free") +
+                       vars(factor(fig_x, levels = fig_x_var$value)), scales = "free") +
             scale_color_manual(values = method_colors, labels = method_names, breaks = methods_level) +
             theme_bw() +
             theme(aspect.ratio = 1,
@@ -174,8 +180,8 @@ draw_fdp_power_dist <- function(experiment, X_types, method_names, method_colors
     }
     
 
-    ggsave(filename = here("figs", paste0(experiment, "-", type, "-", figure ,".pdf")),
-           plot, width = 11, height = 2*(length(X_types)+1))
+    ggsave(filename = here("figs", paste0("simu-", experiment, "-", type, "-", figure ,".pdf")),
+           plot, width = 9, height = 6)
     
     return(plot)
 }

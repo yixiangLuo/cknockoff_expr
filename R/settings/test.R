@@ -13,7 +13,7 @@ source(here("R", "methods.R"))
 
 experiment <- "test"
 
-p <- 100
+p <- 300
 n <- 3*p
 
 X_seed <- 2021
