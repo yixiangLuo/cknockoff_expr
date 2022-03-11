@@ -12,6 +12,8 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
                                  error_bar = F, direction = F){
     load(here("data", paste0(experiment, ".Rdata")))
     
+    browser()
+    
     fdr_power <- lapply(X_types, function(X_type){
         results[[X_type]]$FDR_Power %>% mutate(design_mat = str_replace(X_type, "_", "-"))
     })
@@ -33,7 +35,7 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
 
     ref_prototype <- data.frame(fig_x = c(fig_x_var$value, fig_x_var$value),
                                 threshold = c(unlist(alphas), rep(NA, length(fig_x_var$value))),
-                                type = rep(c("FDR", "TPR"), each = length(fig_x_var$value)))
+                                type = rep(c("FDR", "Power"), each = length(fig_x_var$value)))
     reference <- lapply(X_types, function(X_type){
         ref_prototype %>% mutate(design_mat = X_type)
     })
@@ -62,7 +64,7 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
         geom_line(data = reference, aes(x = fig_x, y = threshold),
                   linetype = "longdash", alpha = 0.6, na.rm = T) +
         facet_grid(vars(factor(design_mat, levels = X_types)),
-                   vars(factor(type, levels = c("FDR", "TPR"))), scales="free") +
+                   vars(factor(type, levels = c("FDR", "Power"))), scales="free") +
         # facet_wrap(vars(factor(design_mat, levels = X_types), factor(type, levels = c("FDR", "Power"))),
         #            ncol = 2, scales="free_y") +
         set_x_axis(breaks = fig_x_var$value, labels = fig_x_var$value) +
@@ -77,7 +79,7 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
               legend.position = "right",
               legend.title=element_text(size=9),
               legend.text=element_text(size=9)) +
-        labs(x = fig_x_var$name, y = "Estimated FDR/TPR")
+        labs(x = fig_x_var$name, y = "Estimated FDR/Power")
 
     ggsave(filename = here("figs", paste0("simu-", experiment, ".pdf")),
            plot, width = 7, height = 2*(length(X_types)+1))
@@ -241,7 +243,7 @@ draw_scale_m_curve <- function(experiment, X_types){
         labs(x = "Number of Hypotheses: m", y = "Runtime (s)")
     
     ggsave(filename = here("figs", paste0("simu-", experiment, ".pdf")),
-           plot, width = 6, height = 5)
+           plot, width = 6, height = 4.5)
     
     return(plot)
 }
@@ -294,7 +296,7 @@ draw_scale_n_curve <- function(experiment, X_types){
         labs(x = "Number of data points: n", y = "Runtime (s)")
     
     ggsave(filename = here("figs", paste0("simu-", experiment, ".pdf")),
-           plot, width = 6, height = 5)
+           plot, width = 6, height = 3)
     
     return(plot)
 }

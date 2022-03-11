@@ -21,12 +21,12 @@ alpha <- 0.05
 p_vec <- c(100, 200, 500, 1000)
 # p_vec <- c(20, 30)
 pi1_list <- list(fixed_alt = 10 / p_vec, fixed_ratio = rep(0.1, length(p_vec)))
-n_rounds <- rep(7, length(p_vec))  # 7 physical cores used
+n_rounds <- c(50, 25, 7, 7)
 
 target <- 0.5
 target_at_alpha <- 0.2
 
-n_cores <- 14
+n_cores <- 7
 
 X_seed <- 2021
 noise <- quote(rnorm(n))
@@ -57,7 +57,7 @@ runtime.result <- lapply(X_types, function(X_type){
                             n = n, p = p, X_type = X_type, sample_num = 5)
       mu1 <- BH_lm_calib(X = NA, random_X.data, pi1, noise,
                          posit_type, 1, side = "two", nreps = 50,
-                         alpha = target_at_alpha, target = target, n_cores = n_cores)
+                         alpha = target_at_alpha, target = target, n_cores = 14)
       
       beta <- genmu(p, pi1, mu1, posit_type, 1)
       
@@ -65,7 +65,7 @@ runtime.result <- lapply(X_types, function(X_type){
       
       print(paste0(c("alt:", which(!H0)), collapse = " "))
       
-      registerDoParallel(n_round)
+      registerDoParallel(n_cores)
       
       runtime <- foreach(iter = 1:n_round) %dopar% {
       # runtime <- sapply(1:n_round, function(iter){
