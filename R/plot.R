@@ -12,8 +12,6 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
                                  error_bar = F, direction = F){
     load(here("data", paste0(experiment, ".Rdata")))
     
-    browser()
-    
     fdr_power <- lapply(X_types, function(X_type){
         results[[X_type]]$FDR_Power %>% mutate(design_mat = str_replace(X_type, "_", "-"))
     })

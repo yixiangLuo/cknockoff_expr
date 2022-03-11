@@ -9,73 +9,71 @@ source(here("R", "plot.R"))
 
 # source(here("R", "settings", "test.R"))
 # source(here("R", "settings", "main_expr_10.R"))
-source(here("R", "settings", "main_expr_30.R"))
+# source(here("R", "settings", "main_expr_30.R"))
 # source(here("R", "settings", "lambdasmax_stat.R"))
 # source(here("R", "settings", "MVR_kn.R"))
 # source(here("R", "settings", "knockoff_stats.R"))
 # source(here("R", "settings", "robust_tNoise.R"))
 # source(here("R", "settings", "robust_noisyBeta.R"))
 
-# source(here("R", "settings", "main_expr_smallScale.R"))
-# source(here("R", "settings", "main_expr_midScale.R"))
-# 
-# args <- commandArgs(trailingOnly=TRUE)
-# if (length(args) > 1) {
-#   stop("One and only one experiment at a time.")
-# } else if (length(args) == 1) {
-#   source(here("R", "settings", paste0(args[1], ".R")))
-# }
-# 
-# file_name <- here("data", "temp", paste0("progress-", experiment, ".txt"))
-# if (file.exists(file_name)) {
-#   file.remove(file_name)
-#   invisible()
-# }
-# 
-# 
-# results <- lapply(1:length(X_types), function(iter_i){
-#   X_type <- X_types[iter_i]
-#   posit_type <- posit_types[iter_i]
-#   X_title <- X_titles[iter_i]
-#   random_X <- random_Xs[iter_i]
-# 
-#   if(!random_X){
-#     X <- gene_X(X_type, n, p, X_seed)
-#     random_X.data <- list(random_X = random_X)
-#     mu1 <- BH_lm_calib(X, random_X.data, pi1, noise = quote(rnorm(n)),
-#                        posit_type, 1, side = "two", nreps = 200,
-#                        alpha = target_at_alpha, target = target, n_cores = n_cores)
-#   } else{
-#     X <- NA
-#     random_X.data <- list(random_X = random_X,
-#                           n = n, p = p, X_type = X_type, sample_num = 5)
-#     mu1 <- BH_lm_calib(X, random_X.data, pi1, noise = quote(rnorm(n)),
-#                        posit_type, 1, side = "two", nreps = 200,
-#                        alpha = target_at_alpha, target = target, n_cores = n_cores)
-#   }
-#   
-#   problem_setting <- list(n = n, p = p, 
-#                           X = X, X_type = X_type, random_X = random_X,
-#                           mu1 = mu1, pi1 = pi1, posit_type = posit_type,
-#                           knockoffs = knockoffs, statistic = statistic,
-#                           method_names = method_names)
-# 
-#   result <- get_fdp_power(problem_setting, beta_permutes, noises, alphas,
-#                           fig_x_var, sample_size, n_cores,
-#                           experiment, X_title)
-# 
-#   save(result, alphas, fig_x_var,
-#        file = here("data", "temp", paste0(experiment, "-", X_type, ".Rdata")))
-# 
-#   return(result)
-# })
-# 
-# names(results) <- X_types
-# 
-# save(results, alphas, fig_x_var, file = here("data", paste0(experiment, ".Rdata")))
-# for(X_type in X_types){
-#   file.remove(here("data", "temp", paste0(experiment, "-", X_type, ".Rdata")))
-# }
+
+args <- commandArgs(trailingOnly=TRUE)
+if (length(args) > 1) {
+  stop("One and only one experiment at a time.")
+} else if (length(args) == 1) {
+  source(here("R", "settings", paste0(args[1], ".R")))
+}
+
+file_name <- here("data", "temp", paste0("progress-", experiment, ".txt"))
+if (file.exists(file_name)) {
+  file.remove(file_name)
+  invisible()
+}
+
+
+results <- lapply(1:length(X_types), function(iter_i){
+  X_type <- X_types[iter_i]
+  posit_type <- posit_types[iter_i]
+  X_title <- X_titles[iter_i]
+  random_X <- random_Xs[iter_i]
+
+  if(!random_X){
+    X <- gene_X(X_type, n, p, X_seed)
+    random_X.data <- list(random_X = random_X)
+    mu1 <- BH_lm_calib(X, random_X.data, pi1, noise = quote(rnorm(n)),
+                       posit_type, 1, side = "two", nreps = 200,
+                       alpha = target_at_alpha, target = target, n_cores = n_cores)
+  } else{
+    X <- NA
+    random_X.data <- list(random_X = random_X,
+                          n = n, p = p, X_type = X_type, sample_num = 5)
+    mu1 <- BH_lm_calib(X, random_X.data, pi1, noise = quote(rnorm(n)),
+                       posit_type, 1, side = "two", nreps = 200,
+                       alpha = target_at_alpha, target = target, n_cores = n_cores)
+  }
+
+  problem_setting <- list(n = n, p = p,
+                          X = X, X_type = X_type, random_X = random_X,
+                          mu1 = mu1, pi1 = pi1, posit_type = posit_type,
+                          knockoffs = knockoffs, statistic = statistic,
+                          method_names = method_names)
+
+  result <- get_fdp_power(problem_setting, beta_permutes, noises, alphas,
+                          fig_x_var, sample_size, n_cores,
+                          experiment, X_title)
+
+  save(result, alphas, fig_x_var,
+       file = here("data", "temp", paste0(experiment, "-", X_type, ".Rdata")))
+
+  return(result)
+})
+
+names(results) <- X_types
+
+save(results, alphas, fig_x_var, file = here("data", paste0(experiment, ".Rdata")))
+for(X_type in X_types){
+  file.remove(here("data", "temp", paste0(experiment, "-", X_type, ".Rdata")))
+}
 
 # method_names <- c("BH", "dBH", "knockoff", "BonBH")
 # method_names <- c("BH", "knockoff", "cKnockoff", "cKnockoff_STAR")

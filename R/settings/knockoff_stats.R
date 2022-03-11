@@ -9,7 +9,7 @@ source(here("R", "methods.R"))
 
 experiment <- "knockoff_stats"
 
-p <- 300
+p <- 1000
 n <- 3*p
 
 X_seed <- 2021
