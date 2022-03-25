@@ -3,7 +3,7 @@
 library(here)
 
 load(here("data", "HIV", "HIV_res.RData"))
-load(here("data", "HIV", "HIV_data.Rdata"))
+load(here("data", "HIV", "HIV_data.RData"))
 
 get_position <- function(x)
   sapply(regmatches(x, regexpr('[[:digit:]]+', x)), as.numeric)

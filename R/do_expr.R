@@ -63,16 +63,16 @@ results <- lapply(1:length(X_types), function(iter_i){
                           experiment, X_title)
 
   save(result, alphas, fig_x_var,
-       file = here("data", "temp", paste0(experiment, "-", X_type, ".Rdata")))
+       file = here("data", "temp", paste0(experiment, "-", X_type, ".RData")))
 
   return(result)
 })
 
 names(results) <- X_types
 
-save(results, alphas, fig_x_var, file = here("data", paste0(experiment, ".Rdata")))
+save(results, alphas, fig_x_var, file = here("data", paste0(experiment, ".RData")))
 for(X_type in X_types){
-  file.remove(here("data", "temp", paste0(experiment, "-", X_type, ".Rdata")))
+  file.remove(here("data", "temp", paste0(experiment, "-", X_type, ".RData")))
 }
 
 # method_names <- c("BH", "dBH", "knockoff", "BonBH")

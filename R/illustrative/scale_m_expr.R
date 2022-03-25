@@ -130,7 +130,7 @@ record <- list(pi1_list = pi1_list,
                knockoffs = knockoffs.name,
                statistic = statistic.name)
 
-save(runtime.result, record, file = here("data", paste0(experiment, ".Rdata")))
+save(runtime.result, record, file = here("data", paste0(experiment, ".RData")))
 
 
 draw_scale_m_curve(experiment, X_types)

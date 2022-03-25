@@ -11,10 +11,10 @@ library(KernSmooth)
 source(here("R", "methods.R"))
 source(here("R", "utils.R"))
 
-if (!file.exists(here("data", "HIV", "HIV_data.Rdata"))){
+if (!file.exists(here("data", "HIV", "HIV_data.RData"))){
   source(here("R", "HIV_drug_expr", "HIV_preprocess.R"))
 }
-load(here("data", "HIV", "HIV_data.Rdata"))
+load(here("data", "HIV", "HIV_data.RData"))
 
 HIV_expr <- function(X, y, alphas,
                      knockoffs = ckn.create.fixed,

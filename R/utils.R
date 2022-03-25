@@ -257,7 +257,7 @@ try_repeat <- function(expr, default = NULL, n_times = 100){
 }
 
 update_count <- function(expr_name, action){
-    file_name <- here("data", "temp", paste0("progress-", expr_name, ".Rdata"))
+    file_name <- here("data", "temp", paste0("progress-", expr_name, ".RData"))
     
     if(action == "start"){
         iters_done <- 0

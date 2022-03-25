@@ -48,7 +48,7 @@ for (drug_class in c("PI", "NRTI", "NNRTI")){
   ## Save data
   data[[drug_class]] <- list(Y = Y, X = X)
 }
-save(data, file = here("data", "HIV", "HIV_data.Rdata"))
+save(data, file = here("data", "HIV", "HIV_data.RData"))
 
 
 

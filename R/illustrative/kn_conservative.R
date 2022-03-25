@@ -194,7 +194,7 @@ results <- abind(results, along=3)
 results <- apply(results, c(1, 2), mean)
 results <- rbind(results, alpha = alphas)
 
-save(results, file = here("data", paste0(experiment, ".Rdata")))
+save(results, file = here("data", paste0(experiment, ".RData")))
 
 
 draw_kn_conservative(experiment)

@@ -122,7 +122,7 @@ names(runtime.result) <- X_types
 record <- list(knockoffs = knockoffs.name,
                statistic = statistic.name)
 
-save(runtime.result, record, file = here("data", paste0(experiment, ".Rdata")))
+save(runtime.result, record, file = here("data", paste0(experiment, ".RData")))
 
 
 draw_scale_n_curve(experiment, X_types)
