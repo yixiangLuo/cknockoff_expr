@@ -79,8 +79,8 @@ unlink(here("data", "temp", experiment), recursive = TRUE)
 dir.create(here("data", "temp", experiment), showWarnings = F)
 dir.create(here("data", "temp", experiment, "progress"), showWarnings = F)
 save(X_data, y_data, index_data,
-     file = here("data", "temp", experiment, "settings.Rdata"))
-save(expr_num, file = here("data", "temp", experiment, "expr_num.Rdata"))
+     file = here("data", "temp", experiment, "settings.RData"))
+save(expr_num, file = here("data", "temp", experiment, "expr_num.RData"))
 
 unlink(here("log", experiment), recursive = TRUE) 
 dir.create(here("log", experiment), showWarnings = F)

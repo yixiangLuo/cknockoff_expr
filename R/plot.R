@@ -10,7 +10,7 @@ source(here("R", "utils.R"))
 draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
                                  method_names, method_colors, method_shapes,
                                  error_bar = F, direction = F){
-    load(here("data", paste0(experiment, ".Rdata")))
+    load(here("data", paste0(experiment, ".RData")))
     
     fdr_power <- lapply(X_types, function(X_type){
         results[[X_type]]$FDR_Power %>% mutate(design_mat = str_replace(X_type, "_", "-"))
@@ -89,7 +89,7 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
 
 draw_fdp_power_dist <- function(experiment, X_types, method_names, method_colors,
                                 type = "TPP", figure = "ECDF"){
-    load(here("data", paste0(experiment, ".Rdata")))
+    load(here("data", paste0(experiment, ".RData")))
     
     method_names_org <- unique(results[[1]]$FDR_Power$method_name)
     method_level_org <- factor(seq_along(method_names_org), ordered = T)
@@ -182,7 +182,7 @@ draw_fdp_power_dist <- function(experiment, X_types, method_names, method_colors
 
 
 draw_scale_m_curve <- function(experiment, X_types){
-    load(here("data", paste0(experiment, ".Rdata")))
+    load(here("data", paste0(experiment, ".RData")))
     alt_types <- c("fixed_alt", "fixed_ratio")
     runtime <- lapply(X_types, function(X_type){
         fixed_alt <- runtime.result[[X_type]]$fixed_alt %>% mutate(alt = alt_types[1])
@@ -241,7 +241,7 @@ draw_scale_m_curve <- function(experiment, X_types){
 }
 
 draw_scale_n_curve <- function(experiment, X_types){
-    load(here("data", paste0(experiment, ".Rdata")))
+    load(here("data", paste0(experiment, ".RData")))
     runtime <- lapply(X_types, function(X_type){
         runtime.result[[X_type]] %>% mutate(design_mat = str_replace(X_type, "_", "-"))
     })
@@ -294,7 +294,7 @@ draw_scale_n_curve <- function(experiment, X_types){
 }
 
 draw_kn_conservative <- function(experiment){
-    load(here("data", paste0(experiment, ".Rdata")))
+    load(here("data", paste0(experiment, ".RData")))
     
     quant_names <- rownames(results)[1:(NROW(results)-1)]
     quant_colors <- c("#a6bddb", "#fc8d59", "#2b8cbe", "#d95f0e", "#045a8d", "#333333",

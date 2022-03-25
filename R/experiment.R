@@ -16,7 +16,7 @@ if (length(args) == 2) {
 
 # load packages and data
 source(here("R", "settings", paste0(experiment, ".R")))
-load(here("data", "temp", experiment, "settings.Rdata"))
+load(here("data", "temp", experiment, "settings.RData"))
 
 # the indeces of experiments this job should do
 job_expr_indeces <- get_data_indeces(job_id, index_data)
@@ -74,7 +74,7 @@ for(expr_index in job_expr_indeces){
   
   # save results
   save(fdp_power,
-       file = here("data", "temp", experiment, paste0(expr_index$expr_id, ".Rdata")))
+       file = here("data", "temp", experiment, paste0(expr_index$expr_id, ".RData")))
   
   # delete the "in-progress" record
   unlink(here("data", "temp", experiment, "progress", expr_index$expr_id))

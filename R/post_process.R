@@ -15,14 +15,14 @@ if (length(args) == 1) {
 
 # load packages and data
 source(here("R", "settings", paste0(experiment, ".R")))
-load(here("data", "temp", experiment, "settings.Rdata"))
+load(here("data", "temp", experiment, "settings.RData"))
 
 # record computed result in the data structure
 expr_num <- index_data$X_len * index_data$fig_x_len * index_data$sample_len
 for(expr_id in 1:expr_num){
     expr_index <- get_expr_index(expr_id, index_data)
     
-    load(here("data", "temp", experiment, paste0(expr_index$expr_id, ".Rdata")))
+    load(here("data", "temp", experiment, paste0(expr_index$expr_id, ".RData")))
     y_data[[expr_index$X_index]][[expr_index$fig_x_index]]$data[[expr_index$y_index]]$fdp_power <- fdp_power
 }
 
@@ -71,7 +71,7 @@ X_results <- lapply(1:index_data$X_len, function(X_iter){
 results <- X_results
 names(results) <- X_types
 
-save(results, alphas, fig_x_var, file = here("data", paste0(experiment, ".Rdata")))
+save(results, alphas, fig_x_var, file = here("data", paste0(experiment, ".RData")))
 
 draw_fdp_power_curve(experiment, X_types, sample_size,
                      method_names, method_colors, method_shapes,

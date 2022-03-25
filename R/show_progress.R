@@ -3,10 +3,10 @@ library(here)
 experiments <- list.dirs(path = here("data", "temp"), full.names = F, recursive = F)
 
 for(experiment in experiments){
-    load(here("data", "temp", experiment, "expr_num.Rdata"))
+    load(here("data", "temp", experiment, "expr_num.RData"))
     
     complete_num <- length(list.files(path = here("data", "temp", experiment),
-                                      pattern="^\\d+?\\.Rdata$"))
+                                      pattern="^\\d+?\\.RData$"))
     running_num <- length(list.files(path = here("data", "temp", experiment, "progress"),
                                      pattern="^\\d+?$"))
     
