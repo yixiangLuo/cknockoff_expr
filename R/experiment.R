@@ -46,6 +46,7 @@ for(expr_index in job_expr_indeces){
       X <- setting$X
       method_list <- setting$method_list
   }
+  mu1 <- setting$mu1
   
   beta <- genmu(setting$p, setting$pi1, setting$mu1, setting$posit_type, 1)
   H0 <- beta == 0
