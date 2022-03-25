@@ -57,8 +57,7 @@ knockoffs <- ckn.create.fixed
 statistic <- stat.glmnet_coefdiff_tiebreak
 
 get_method_list <- get_multi_method_list
-method_names <- c("BH", "knockoff", "cKnockoff", "cKnockoff_STAR", "cLasso")
-# method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR") #, "mKnockoff"
+method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR") #, "mKnockoff"
 # method_names <- c("knockoff", "mKnockoff")
 
 X_titles <- paste0("X: ", X_types)

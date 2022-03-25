@@ -1,5 +1,4 @@
 source(here("R", "multi_knockoff.R"))
-source(here("R", "cali_lasso.R"))
 
 
 # weighted BH method
@@ -105,91 +104,6 @@ BonfBH <- function(X, y, alpha, BonfBH_X = NULL){
 
     return(result)
 }
-
-
-
-
-# process_y <- function(X.pack, y, randomize = F){
-# 
-#     n <- length(y)
-#     p <- NCOL(X.pack$X)
-#     
-#     # compute RSS and degree of freedom in y ~ X
-#     RSS_X <- sum(y^2) - sum((matrix(y, nrow=1) %*% X.pack$XXk.org.basis[1:n, 1:p])^2)
-#     df_X <- n - p
-#     
-#     # augment y if needed
-#     if(n < 2*p){
-#         if(randomize){
-#             y.extra <- rnorm(2*p-n, sd = sqrt(RSS_X / (n - p)))
-#         } else{
-#             y.extra <- with_seed(0, rnorm(2*p-n, sd = sqrt(RSS_X / (n - p))))
-#         }
-#         y <- c(y, y.extra)
-#     }
-#     
-#     # record the original y before rotation
-#     y.org <- y
-#     
-#     # rotate y in the same way as we did for [X Xk]
-#     y.norm2 <- sum(y^2)
-#     y <- as.vector(matrix(y, nrow=1) %*% X.pack$XXk.org.basis)
-#     
-#     # the component of y not in the 2p-dim subspace (residue of y~[X Xk])
-#     # is recorded separately as RSS_XXk and df_XXk
-#     if(n < 2*p+1){
-#         RSS_XXk <- RSS_X
-#         df_XXk <- df_X
-#     } else{
-#         RSS_XXk <- y.norm2 - sum(y^2)
-#         df_XXk <- n - 2*p
-#     }
-#     
-#     sigmahat_XXk_res <- sqrt((RSS_XXk) / df_XXk)
-# 
-#     return(list(y = as.vector(y), y.org = as.vector(y.org),
-#                 sigmahat_XXk_res = sigmahat_XXk_res))
-# }
-# 
-# kn.select <- function(kn_statistics, alpha,
-#                       selective = T, early_stop = F){
-#     p <- length(kn_statistics)
-#     W_desc_ind <- order(abs(kn_statistics), decreasing = T)
-#     W_desc <- kn_statistics[W_desc_ind]
-#     
-#     # fdp <- sapply(abs(W_desc), function(t){
-#     #     (1 + sum(kn_statistics <= -t)) / max(1, sum(kn_statistics >= t))
-#     # })
-#     fdp <- rep(NA, p)
-#     neg_stat_num <- 0
-#     pos_stat_num <- 0
-#     for(k in 1:p){
-#         pos_stat_num <- pos_stat_num + (W_desc[k] > 0)
-#         neg_stat_num <- neg_stat_num + (W_desc[k] < 0)
-#         fdp[k] <- (1 + neg_stat_num) / max(1, pos_stat_num)
-#     }
-#     ok <- which(fdp <= alpha)
-#     k_hat <- ifelse(length(ok) > 0, max(ok), 0)
-#     
-#     if(early_stop){
-#         ok <- which(cumsum(W_desc > 0) < 1/alpha)
-#         k_hat <- max(k_hat, ifelse(length(ok) > 0, max(ok), 0))
-#     }
-#     # if(early_stop == 2){
-#     #   ok <- which((fdp <= 1) & (cumsum(W_desc > 0) < 1/alpha))
-#     #   k_hat <- max(k_hat, ifelse(length(ok) > 0, max(ok), 0))
-#     # }
-#     
-#     if(k_hat > 0){
-#         selected <- sort(W_desc_ind[which(W_desc[1:k_hat] > 0)])
-#     } else{
-#         selected <- NULL
-#     }
-#     fdp_est <- ifelse(k_hat > 0, fdp[k_hat], 1)
-#     W_k_hat <- abs(W_desc[max(k_hat, 1)])
-#     
-#     results <- list(selected = selected, fdp_est = fdp_est,  W_k_hat = W_k_hat)
-# }
 
 
 get_multi_method_list <- function(X, knockoffs, statistic, method_names){
@@ -309,21 +223,15 @@ get_multi_method_list <- function(X, knockoffs, statistic, method_names){
             return(list(selected = result$selected, sign_predict = result$sign_predict))
         }
     }
-    if("cLasso" %in% method_names){
-        methods$cLasso <- function(y, X, alpha){
-            result <- cLasso(X, y, alpha)
-            return(list(selected = result$selected))
-        }
-    }
 
     return(methods)
 }
 
-multi_method_color <- c("#984ea3", "dodgerblue3", "#333333", "#006d2c", "#33a02c", "red", "orange1", "#006d2c")
-names(multi_method_color) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR", "cLasso")
+multi_method_color <- c("#984ea3", "dodgerblue3", "#333333", "#006d2c", "#33a02c", "red", "orange1")
+names(multi_method_color) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
 
-multi_method_shape <- c(3, 4, 17, 6, 23, 19, 15, 6)
-names(multi_method_shape) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR", "cLasso")
+multi_method_shape <- c(3, 4, 17, 6, 23, 19, 15)
+names(multi_method_shape) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
 
 
 get_kn_method_list <- function(X, knockoffs, statistic, method_names){
