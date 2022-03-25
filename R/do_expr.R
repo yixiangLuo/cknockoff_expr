@@ -87,7 +87,7 @@ draw_fdp_power_curve(experiment, X_types, sample_size,
                      error_bar = F, direction = F)
 
 
-# method_names <- c("BH", "knockoff", "cKnockoff", "cKnockoff_STAR")
+# method_names <- c("BH", "dBH", "knockoff", "cKnockoff", "cKnockoff_STAR")
 # method_colors <- unname(multi_method_color[method_names])
 # X_types <- c("IID_Normal", "MCC", "MCC_Block")
 # 

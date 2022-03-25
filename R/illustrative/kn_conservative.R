@@ -34,7 +34,7 @@ sample_size <- 100
 n_cores <- 14
 
 knockoffs <- create.fixed
-statistic <- stat.glmnet_coefdiff_lm
+statistic <- stat.glmnet_coefdiff_tiebreak
 
 # alphas <- seq(from = 0.005, to = 0.3, length.out = 100)
 alphas <- seq(from = 0.05, to = 0.2, by = 0.05)

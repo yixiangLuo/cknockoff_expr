@@ -7,6 +7,8 @@ library(cknockoff)
 library(glmnet)   # lasso
 library(KernSmooth)  # local linear regression
 
+library(latex2exp)
+
 source(here("R", "utils.R"))
 source(here("R", "methods.R"))
 
@@ -21,6 +23,7 @@ pi1 <- 10 / p
 
 X_types <- c("IID_Normal", "MCC", "MCC_Block")
 posit_types <- rep("random", length(X_types))
+random_Xs <- X_types %in% c("IID_Normal")
 
 alphas <- c(0.2)
 beta_permutes <- c(quote(beta[H0] <- runif(sum(H0), min = -0*mu1, max = 0*mu1)),
@@ -39,7 +42,7 @@ sample_size <- 400
 n_cores <- 14
 
 knockoffs <- ckn.create.fixed
-statistic <- stat.glmnet_coefdiff_lm
+statistic <- stat.glmnet_coefdiff_tiebreak
 
 get_method_list <- get_multi_method_list
 method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")

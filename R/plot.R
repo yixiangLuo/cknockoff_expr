@@ -80,7 +80,7 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
         labs(x = fig_x_var$name, y = "Estimated FDR/Power")
 
     ggsave(filename = here("figs", paste0("simu-", experiment, ".pdf")),
-           plot, width = 7, height = 2*(length(X_types)+1))
+           plot, width = 7, height = 2*(length(X_types)+1)-1)
     
     return(plot)
 }

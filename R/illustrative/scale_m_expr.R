@@ -32,7 +32,7 @@ X_seed <- 2021
 noise <- quote(rnorm(n))
 
 knockoffs.name <- "ckn.create.fixed"
-statistic.name <- "stat.glmnet_coefdiff_lm"
+statistic.name <- "stat.glmnet_coefdiff_tiebreak"
 
 knockoffs <- get(knockoffs.name)
 statistic <- get(statistic.name)

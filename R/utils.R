@@ -5,9 +5,12 @@ library(foreach)
 library(doParallel)
 
 # generate design matrix randomly
-gene_X <- function(X_type = "IID_Normal", n, p, X_seed = 1){
+gene_X <- function(X_type = "IID_Normal", n, p, X_seed = NULL){
+    if(!is.null(X_seed)){
+        set.seed(X_seed)
+    }
+    
     cor_radius <- 5
-    set.seed(X_seed)
     if(X_type == "IID_Normal"){
         X <- matrix(rnorm(n*p), n) / sqrt(n)
     } else if(X_type == "Coef_AR"){

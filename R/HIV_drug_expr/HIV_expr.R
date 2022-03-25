@@ -18,7 +18,7 @@ load(here("data", "HIV", "HIV_data.Rdata"))
 
 HIV_expr <- function(X, y, alphas,
                      knockoffs = ckn.create.fixed,
-                     statistic = stat.glmnet_coefdiff_lm){
+                     statistic = stat.glmnet_coefdiff_tiebreak){
   ## Log-transform the drug resistance measurements.
   y <- log(y)
   
