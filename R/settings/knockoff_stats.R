@@ -15,7 +15,7 @@ n <- 3*p
 X_seed <- 2021
 pi1 <- 10 / p
 
-X_types <- c("IID_Normal", "MCC", "MCC_Block", "Coef_AR", "X_AR")
+X_types <- c("IID_Normal", "MCC", "MCC_Block")
 posit_types <- rep("random", length(X_types))
 random_Xs <- X_types %in% c("IID_Normal")
 
@@ -33,10 +33,10 @@ sample_size <- 400
 n_cores <- 14
 
 knockoffs <- ckn.create.fixed
-statistic <- stat.glmnet_coefdiff_lm
+statistic <- stat.glmnet_coefdiff_tiebreak
 
 get_method_list <- get_kn_method_list
-method_names <- c("kn_D_lambdasmax", "kn_D_lambdasmax_lm", "kn_D_coefdiff_lm")
+method_names <- c("LSM", "C_D_LSM", "LCD_D_T")
 
 X_titles <- paste0("X: ", X_types)
 

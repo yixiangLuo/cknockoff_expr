@@ -35,8 +35,8 @@ target_at_alpha <- 0.2
 sample_size <- 400
 n_cores <- 14
 
-knockoffs <- create.fixed.MRC
-statistic <- stat.glmnet_coefdiff_lm
+knockoffs <- ckn.create.fixed.MRC
+statistic <- stat.glmnet_coefdiff_tiebreak
 
 get_method_list <- get_multi_method_list
 method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")

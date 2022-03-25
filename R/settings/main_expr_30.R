@@ -37,7 +37,7 @@ sample_size <- 400
 n_cores <- 14
 
 knockoffs <- ckn.create.fixed
-statistic <- stat.glmnet_coefdiff_lm
+statistic <- stat.glmnet_coefdiff_tiebreak
 
 get_method_list <- get_multi_method_list
 method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")

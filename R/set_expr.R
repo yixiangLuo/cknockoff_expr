@@ -23,8 +23,8 @@ y_data <- list()
 for(X_iter in 1:length(X_types)){
   X_type <- X_types[X_iter]
   posit_type <- posit_types[X_iter]
-  # random_X <- random_Xs[X_iter]
-  random_X <- T
+  random_X <- random_Xs[X_iter]
+  # random_X <- T
   
   if(!random_X){
     X <- gene_X(X_type, n, p, X_seed)
