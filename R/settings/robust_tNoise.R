@@ -21,7 +21,7 @@ pi1 <- 10 / p
 
 X_types <- c("IID_Normal", "MCC", "MCC_Block", "Sparse")
 posit_types <- rep("random", length(X_types))
-random_Xs <- X_types %in% c("IID_Normal")
+random_Xs <- X_types %in% c("IID_Normal", "Sparse")
 
 alphas <- c(0.2)
 beta_permutes <- NA
