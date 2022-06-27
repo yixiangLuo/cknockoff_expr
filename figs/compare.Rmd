@@ -1,0 +1,94 @@
+```{r setup, echo = FALSE, message=FALSE, warning=FALSE}
+library(here)
+
+# source(here("R", "experiment.R"))
+source(here("R", "methods.R"))
+source(here("R", "utils.R"))
+source(here("R", "plot.R"))
+```
+
+
+```{r fig.height=7}
+experiment <- "test-Rhat_guess"
+sample_size <- 100
+
+X_types <- c("IID_Normal", "MCC", "Homo_Block")
+method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff_PLUS") #, "cKnockoff_L_0d8_R_"
+
+method_colors <- unname(multi_method_color[method_names])
+method_shapes <- unname(multi_method_shape[method_names])
+
+draw_fdp_power_curve(experiment, X_types, sample_size,
+                     method_names, method_colors, method_shapes,
+                     error_bar = F, direction = F)
+
+
+experiment <- "test"
+sample_size <- 100
+
+X_types <- c("IID_Normal", "MCC", "Homo_Block")
+method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff_PLUS")
+
+method_colors <- unname(multi_method_color[method_names])
+method_shapes <- unname(multi_method_shape[method_names])
+
+draw_fdp_power_curve(experiment, X_types, sample_size,
+                     method_names, method_colors, method_shapes,
+                     error_bar = F, direction = F)
+```
+
+
+
+
+# ```{r define-problem}
+# set.seed(2022)
+# # Problem parameters
+# n <- 1000          # number of observations
+# p <- 200           # number of variables
+# k <- 20            # number of variables with nonzero coefficients
+# amplitude <- 3.5   # signal amplitude (for noise level = 1)
+# 
+# # Generate the variables from a multivariate normal distribution
+# mu <- rep(0,p)
+# rho <- 0.25
+# Sigma <- toeplitz(rho^(0:(p-1)))
+# X <- matrix(rnorm(n*p),n) %*% chol(Sigma)
+# 
+# # Generate the response from a linear model
+# nonzero <- sample(p, k)
+# beta <- amplitude * (1:p %in% nonzero) / sqrt(n)
+# y.sample <- function(X) X %*% beta + rnorm(n)
+# y <- y.sample(X)
+# ```
+# 
+# ```{r knock-default, results='hide', message=F, warning=F}
+# library(knockoff)
+# library(cknockoff)
+# ```
+# 
+# ```{r message=F, warning=F}
+# # 20 true non-nulls
+# print(sort(nonzero))
+# ```
+# ```{r message=F, warning=F}
+# # knockoff
+# result <- knockoff.filter(X, y, knockoffs = create.fixed, fdr = 0.05)
+# print(result$selected)
+# ```
+# ```{r message=F, warning=F}
+# # cknockoff
+# result <- cknockoff(X, y, alpha = 0.05)
+# print(result$selected)
+# ```
+# ```{r message=F, warning=F}
+# # cknockoff^*
+# result <- cknockoff(X, y, alpha = 0.05, Rstar_refine = T)
+# print(result$selected)
+# ```
+
+
+
+
+
+
+

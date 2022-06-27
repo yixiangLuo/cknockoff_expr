@@ -1,0 +1,354 @@
+---
+title: "Better Rhat and Calibrate with KN Involves"
+author: "Yixiang Luo"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+bibliography: references.bib
+header-includes:
+   - \usepackage{float}
+   - \usepackage{bbm}
+   - \usepackage{amssymb}
+   - \usepackage{amsmath}
+   - \usepackage{amsthm}
+   - \usepackage{mathtools}
+   - \usepackage{mathrsfs}
+output: 
+  pdf_document:
+    citation_package: natbib
+    number_sections: true
+---
+
+
+
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{prop}{Proposition}[section]
+\newtheorem{cor}{Corollary}[section]
+\newtheorem{lemma}[equation]{Lemma}
+
+\newcommand{\cB}{\mathcal{B}}
+\newcommand{\cC}{\mathcal{C}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\cH}{\mathcal{H}}
+\newcommand{\cN}{\mathcal{N}}
+\newcommand{\cP}{\mathcal{P}}
+\newcommand{\cR}{\mathcal{R}}
+\newcommand{\cS}{\mathcal{S}}
+\newcommand{\cA}{\mathcal{A}}
+\newcommand{\cX}{\mathcal{X}}
+\newcommand{\cK}{\mathcal{K}}
+\newcommand{\cT}{\mathcal{T}}
+\newcommand{\cl}{\mathcal}
+
+\newcommand{\ff}{\mathfrak{f}}
+
+
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\EE}{\mathbb{E}}
+\newcommand{\ZZ}{\mathbb{Z}}
+\newcommand{\NN}{\mathbb{N}}
+\newcommand{\PP}{\mathbb{P}}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\ep}{\varepsilon}
+
+\newcommand{\bS}{\mathbb{S}}
+
+\newcommand{\hc}{\hat{c}}
+\newcommand{\hk}{{\hat{k}}}
+\newcommand{\hf}{{\hat{f}}}
+\newcommand{\hR}{\widehat{R}}
+
+\newcommand{\tw}{\widetilde{w}}
+\newcommand{\tk}{\tilde{k}}
+\newcommand{\tX}{\widetilde{X}}
+\newcommand{\tE}{\widetilde{E}}
+\newcommand{\tOmega}{\widetilde{\Omega}}
+
+\newcommand{\FDR}{\textnormal{FDR}}
+\newcommand{\hFDR}{\widehat{\FDR}}
+\newcommand{\hFDP}{\widehat{\FDP}}
+\newcommand{\FDP}{\textnormal{FDP}}
+\newcommand{\DP}{\textnormal{DP}}
+\newcommand{\kn}{{\textnormal{Kn}}}
+\newcommand{\ckn}{{\textnormal{cKn}}}
+\newcommand{\pckn}{{\textnormal{pcKn}}}
+\newcommand{\kckn}{{\textnormal{kcKn}}}
+\newcommand{\eskn}{{\textnormal{EsKn}}}
+\newcommand{\BH}{{\textnormal{BH}}}
+\newcommand{\BY}{{\textnormal{BY}}}
+\newcommand{\Bonf}{{\textnormal{Bon}}}
+\newcommand{\hyb}{{\textnormal{Hyb}}}
+
+
+\newcommand{\simiid}{\overset{\text{i.i.d.}}{\sim}}
+\newcommand{\eqd}{\overset{d}{=}}
+\newcommand{\eqv}{\;\Leftrightarrow\;}
+\newcommand{\sgn}{{\textnormal{sgn}}}
+
+\newcommand{\pth}[1]{\left( #1 \right)}
+\newcommand{\br}[1]{\left[ #1 \right]}
+\newcommand{\cur}[1]{\left \{  #1 \right \}}
+\newcommand{\vct}[1]{\boldsymbol{#1}}
+\newcommand{\mat}[1]{\boldsymbol{#1}}
+\newcommand{\abs}[1]{\left| #1 \right|}
+\newcommand{\norm}[1]{\left\| #1 \right\|}
+\newcommand{\set}[1]{\left \{  #1 \right \}}
+\newcommand{\mon}[1]{\left \langle #1 \right \rangle}
+\newcommand{\floor}[1]{\left \lfloor #1 \right \rfloor}
+\newcommand{\ceil}[1]{\left \lceil #1 \right \rceil}
+\newcommand{\Rset}{\mathbb{R}}
+\newcommand{\pt}[1]{\dot{#1}}
+\newcommand{\Var}{\text{Var}}
+
+\newcommand{\mim}{\wedge}
+\newcommand{\mam}{\vee}
+\newcommand{\setcomp}{\mathsf{c}}
+\newcommand{\toProb}{\stackrel{p}{\to}}
+\newcommand*{\tran}{{\mkern-1.5mu\mathsf{T}}}
+
+
+\newcommand{\note}[1]{{\color{red} #1 }}
+
+
+```{r setup, echo = FALSE, message=FALSE, warning=FALSE}
+# load in useful packages
+library(tidyverse)
+library(here)
+
+source(here("R", "methods.R"))
+source(here("R", "utils.R"))
+source(here("R", "plot.R"))
+
+
+# set default knitr chunks
+knitr::opts_chunk$set(
+  echo = FALSE,  # don't print the code chunk
+  warning = FALSE,  # don't print warnings
+  message = FALSE,  # don't print messages
+#  fig.width = 6,  # set default width of figures
+ fig.height = 4,  # set default height of figures
+#  dpi=300, 
+  fig.align = "center",  # always align figure in center
+  fig.pos = "H",  # always plot figure at the exact location of the code chunk
+  cache = FALSE)  # don't cache results
+
+```
+
+
+
+# A better Rhat: conservative but efficient recursive refinement
+
+Recall we want to decide if
+$$
+\EE_{H_j} \br{ f_j \;\Big|\; S_j } \leq 0,
+$$
+where
+$$
+f_j = \DP_j - b_j, \quad
+\DP_j = \frac{\one \set{j \in \cR^\kn} \mam \one \set{p_j \leq c}}{\left| \hR \cup \{j\}\right|}, \quad
+b_j = \frac{\alpha \cdot \one \set{j \in \cR^\eskn}}{\hFDP(\eskn) \left| \cR^\eskn \cup \{j\}\right|}.
+$$
+Any $\hR$ satisfying $\cR^\kn \subseteq \hR \subseteq \cR^\ckn$ is valid. In principle, we can do reversive refinement like in dBH but it would be computationally infeasible for cKnockoff. However, if we restrict our attention only to those very promising features in calibration, the calculation may be very fast and reliable. And a few selection in $\hR$ may help a lot if $\cR^\kn = \emptyset$. In particular, let
+$$
+\hR = \cR^\pckn := \cR^\kn \cup \set{j \in S_{prom}: E_j \leq 0},
+$$
+$$
+S_{prom} = \{j: p_j \leq 0.2 \alpha / m, \; |W_j| \text{ large}\}, \quad
+\text{enforce } |S_{prom}| \leq K_{prom} = \text{ say }5.
+$$
+
+## tricks in computing pcKn
+
+Computing $E_j$ can be viewed as a almost 1-d integral on the right-sided sampled p-value $p_j^r(mc)$ varies from $0$ to $1$ (there is no "almost" if we further conditional on the residue direction). We can compute $E_j$ by a simple numerical integral on equal-spaced grid points of $p_j^r(mc)$ with step size $h$:
+$$
+E_j \approx \sum_{i=1}^{1/h} f_j(p_j^r(mc) = ih) \cdot h.
+$$
+When $h$ is tiny, we expect the error is small.
+
+Note by the definition of $\DP_j$ and $b_j$, we have
+$$
+\int_{\set{f_j > 0}} f_j  \leq p_j(obs).
+$$
+To claim $E_j \leq 0$, it suffices to show
+$$
+p_j(obs) + \int_{\set{p_j(mc) > p_j(obs)}} f_j  \leq 0.
+$$
+Hence we can pick the numerical integral grid points to be (assume $p_j^r(obs) < 1/2$)
+$$
+p_j^r(mc) = p_j^r(obs) + h, \quad p_j^r(obs) + 2h, \quad \cdots \quad p_j^r(obs) + K_{try}h, \quad K_{try} = \text{say } 3.
+$$
+Once we see
+$$
+\sum_{i=1}^{k} f_j(p_j^r(mc) = p_j^r(obs) + kh) \cdot h + p_j(obs) \leq 0,
+$$
+we stop and reject $j$. Otherwise we don't reject after $K_{try}$ tries.
+
+This trick makes computing $\cR^\pckn$ to be at most as expensive as $K_{prom} \cdot K_{try}$ times evaluating knockoff statistics.
+
+The question remains is how to choose $h$. The calling of $\cR^\pckn$ indicates knockoff is making no rejection. Hence we expect knockoff will also make no rejection when $p_j(mc)$ is even a bit larger than $p_j(obs)$. So We could estimate $b_j$ as
+$$
+b_j \approx \frac{\alpha}{1 / \alpha - 1}
+$$
+when $p_j(mc)$ is close to $p_j(obs)$. Then we can set
+$$
+h = p_j(obs) / \frac{\alpha}{1 / \alpha - 1}
+$$
+and hope to reject $j$ at the first try. For $m=100$ and $\alpha = 0.2$, such $h$ is at most roughly $0.01$, which I think is the largest $h$ we can trust.
+
+
+## tricks in using pcKn
+
+Now let's come back to the "outer" calibration computation of $E_j$ and treat $\cR^\pckn$ as a black box.
+
+There are some tricks when employing $\cR^\pckn$  to reduce computational burden.
+
+1. Only use $\hR = \cR^\pckn$ if $\DP_j$ has numerator $>0$.
+2. Only use $\hR = \cR^\pckn$ when $\cR^\kn = \emptyset$.
+3. Only use $\hR = \cR^\pckn$ if we think it would convert a "no reject" to "reject". We can change our mind as the calculation goes on. In particular, we may compute $E_j$ with $\hR = \cR^\kn$ and
+    - if $E_j \leq 0$, reject $j$;
+    - if $E_j > 0$, compute $R^*$ as the desired new denominator of $\DP_j$ for "those MC samples who has $\DP_j = 1$" in order to make the new $E_j \leq 0$. If $R^* > K_{prom}$, don't reject $j$.
+    - if $R^* \leq K_{prom}$, but as we have computed a few $\cR^\pckn$, if in average $|\cR^\pckn| < R^*$, don't reject $j$.
+    - otherwise replace the denominator of $\DP_j$ for "those MC samples who has $\DP_j = 1$" by the new denominator $\hR = \cR^\pckn$ and make rejection decision accordingly.
+  
+  Trick 1 is of course valid. Trick 2 is valid because it's equivalent to set the screening set $S_{prom} = \emptyset$ if $\cR^\kn = \emptyset$. And the screening set is allowed to depend on $y$ in an arbitrary way. As for trick 3, imagine a calculation of $E_j$ that employ $\hR = \cR^\pckn$ for every MC sample. The result will control FDR as we have seen. Now if we replace $f_j$ calculated from some MC samples by some new $f_j$ employing $\hR = \cR^\kn$, we a.s. make $E_j$ larger. Hence it's conservative and hence safe.
+
+## sampling: pairing samples from (f_j>0) and (rest)?
+
+In generating MC samples for computing $E_j$, recall that we generate one sample from $\{p_j(mc) <= p_j(obs)\}$ and one from the rest and take their weighted average to get one sample for $f_j$. We expect this to reduce the variance of $f_j$ samples as it pairs a positive and a negative $f_j$. Some exploratory experiments a month ago indicated it requires less MC samples to have the confidence intervals exclude $0$. I did a larger-sized experiment on IID-Normal design and confirms it: the number of MC samples required by pairing sampling is in between $1/2$ and $1$ of the ones required by naive sampling.
+
+A problem for paring sampling is that we might over sample from the region $\{p_j(mc) <= p_j(obs)\}$ when it is comparably very small. And it is the region where we apply recursive refinement. This may make the pairing sampling be computationally heavier than naive sampling. Hence in the implementation for the following experiments, I use the naive sampling as a start point.
+
+## heuristic analysis on MCC
+
+One motivation of this idea is to beat the hybrid method cKnockoff(0.8) at MCC design. But heuristic analysis shows this can't be achieved.
+
+Recall in MCC, the normalized $\Sigma = (X^T X)^{-1}$ has diagonal $1$ and off-diagonal $0.5$. Let's think about z-statistics instead of t-stat for simplicity. Suppose $j=1$ and the first 10 hypotheses are nonnulls $\beta_{1-10} = 10$. And suppose we observe $Z_{1-10} = 10$ and $Z_{11-100} = 0$. Then conditional on $S_1$,
+$$
+Z_{-1}(mc) = Z_{-1}(obs) + 0.5 (Z_1(mc) - Z_1(obs)).
+$$
+Consider two cases in $\set{p_j(mc) \leq p_j(obs)}$.
+
+- $Z_1(mc) \geq Z_1(obs)$. We have $Z(mc) \approx Z(obs)$ and both Bonferroni (in cKnockoff(0.8)) and $\cR^\pckn$ can make a few rejections.
+- $Z_1(mc) \leq -Z_1(obs)$. We have roughly $Z_1= -10$, $Z_{2-10} = 0$, and $Z_{11-100}= -10$. So Bonferroni can reject 91 hypotheses. However, these 91 hypotheses have very small $W$-statistics while hypotheses 2-10 have very large p-value. $\cR^\pckn$ cannot make any rejection here.
+
+## numerical results
+
+Please see the figure below. cKnockoff1 is the one with $\hR = \cR^\pckn$. It indeed improves the power but still doesn't beat cKnockoff(0.8) under MCC.
+
+As for running time, I pick the settings to make $\cR^\pckn$ to be employed easily and set $K_{try} = 3$ and $K_{prom} = 5$. The overall running time of 100 trials of $y$ for $m=100$ increases from about 3min (for cKnockoff) to about 4min (for cKnockoff1).
+
+```{r prototype}
+experiment <- "test"
+X_types <- c("IID_Normal", "MCC", "Homo_Block")
+sample_size <- 100
+method_names_all <- c("BH", "knockoff", "cKnockoff", "cKnockoff_L_0d8_R_", "cKnockoff1",
+                  "cKnockoff_cali_kn", "cKnockoff1_cali_kn")
+method_colors_all <- c("#377eb8", "#999999", "#333333", "#4daf4a", "#984ea3", "#a65628", "#e41a1c")
+method_shapes_all <- rep(19, 7)
+
+```
+
+```{r Rhat, fig.height=7, fig.cap = "Performance of the improved Rhat. cKnockoff1 is the one with Rhat = R(cpKn). m = 100."}
+experiment <- "test"
+X_types <- c("IID_Normal", "MCC", "Homo_Block")
+sample_size <- 100
+methods_show <- 1:5
+method_names <- method_names_all[methods_show]
+method_colors <- method_colors_all[methods_show]
+method_shapes <- method_shapes_all[methods_show]
+
+draw_fdp_power_curve(experiment, X_types, sample_size,
+                     method_names, method_colors, method_shapes,
+                     error_bar = F, direction = F)
+
+```
+
+# Calibrate with KN involves
+
+Is it possible to further improve the method and try to beat the hybrid one under MCC? This motivated a new idea I call "calibration with knockoff involves" (definitely a bad name). In the following, I denote it as $\cR^\kckn$.
+
+The idea is simple: we reject 
+$$
+\cR^\kckn := \cR^\kn \cup \set{j: p_j \leq c_j^*, \quad \text{knockoff prefer } j},
+$$
+$$
+\text{knockoff prefer } j := |W_j| \text{ is at least the } (2 K_{relax}/\alpha) \text{-th largest}, \quad \textbf{or} 
+$$
+$$
+\text{assign } W_j \leftarrow |W_j|, \text{ rerun knockoff with the new W-stats at level } K_{relax} \alpha, 
+\text{ ture if j is rejected},
+$$
+where $K_{relax} \geq 1$ is say 1.5. 
+
+$c_j^*$ is computed from the accordingly adjusted $E_j$ with
+$$
+\DP_j = \frac{\one \set{j \in \cR^\kn} \mam \one \set{p_j \leq c, \; \text{knockoff prefer } j}}{\left| \hR \cup \{j\}\right|}.
+$$
+In other words, we use "knockoff prefer" to do a screening and take the screening into consideration when we do calibration.
+
+Before we look at its advantage, I want to first show it's computationally not harder, as illustrated below.
+- the W-statistics to decide "knockoff prefer" is already computed for each MC sample.
+- $\DP_j$ is still increasing in $c$. Hence we don't need to find $c_j^*$ as well.
+- Adding the "knockoff prefer" makes $\set{f_j > 0}$ shrink. So our sampling scheme based on the conservative approximation still works.
+
+## why using "knockoff prefer"
+
+In general, the failing cases for knockoff we have seen (small sample issue, MCC) are not because the ordering based on $|W|$ is bad. Instead, the rank of $|W|$ is a very good indicator for the alternatives in all these cases we have seen.
+
+In particular, I want to claim that $\cR^\kckn \supseteq \cR^\ckn$ is **heuristically/approximately** true. This is based on a both consistently observed and heuristically true phenomenon: conditional on $S_j$, $|W_j|$ achieve its maximum when $p_j \to 0$, as illustrated below.
+
+![|Wj| is large when pj is small and on the observed side](./figs/kn_stats.pdf)
+Since we also do the p-value screening, we only consider $j$ not selected by Knockoff and has $p_j$ small.
+
+The claim consists of two parts:
+
+1. If $j \in \cR^\ckn$, then $j$ will not be screened out by "knockoff prefer".  
+For $j$ to be rejected by calibration in $\cR^\ckn$, it has two cases.
+    - Most samples in $\set{p_j(mc) <= p_j(obs)}$ also have $j \in \cR^\kn$. If this is the case, the second part of "knockoff prefer" will not screen out $j$.
+    - Most samples in $\set{p_j(mc) <= p_j(obs)}$ has $j \not\in \cR^\kn$. To have $j$ rejected, by cKnockoff, we must have many samples in $\set{p_j(mc) > p_j(obs)}$ such that $j$ is rejected by early stopping knockoff (and due to early stopping). If this is the case then the first part of "knockoff prefer" will not screen out $j$.
+    - About half of samples in $\set{p_j(mc) <= p_j(obs)}$ have $j \in \cR^\kn$ while the other half not but still $|\cR^\kn| > 0$. I expect the second part of "knockoff prefer" with the relaxing factor will not screen out $j$ in this case.
+    
+This heuristic analysis also tells a sad story: cKnockoff is only able to make roughly at most $2/\alpha$ more rejections than knockoff. With MCC design and a strong signal, if $m = 2000$, $|\cH_1| = 100$, and $\alpha = 0.1$, then we shouldn't expect cKnockoff to perform comparably with dBH. In other words, we are expecting too much of cKnockoff to solve the whiteout issue.
+    
+2. $\cR^\kckn$ can make more rejections.  
+In general, adding the "knockoff prefer" screener will make $c_j^*$ larger. Hence $\cR^\kckn$ is more powerful.  
+In particular, consider the case described in Section 1.4 dot 2 "$Z_1(mc) \leq -Z_1(obs)$". $|W_j|$ will be small and hence $j$ will be screened out. Therefore we will have $DP_j = 0$ instead of $1$ in this case, which brings $E_j$ down.
+
+## numerical results
+
+Please see the results below. $\cR^\kckn$ is a bit better than $\cR^\ckn$. Knockoff-cali-kn is the one with "knockoff prefer" screener. But the power gain is not large and it still doesn't beat cKnockoff(0.8).
+
+```{r caliKn, fig.height=7, fig.cap = "Performance of kcKn. cKnockoff-cali-kn is the one with 'knockoff prefer' screener. m = 100."}
+experiment <- "test"
+X_types <- c("IID_Normal", "MCC", "Homo_Block")
+sample_size <- 100
+methods_show <- c(1:4, 6)
+method_names <- method_names_all[methods_show]
+method_colors <- method_colors_all[methods_show]
+method_shapes <- method_shapes_all[methods_show]
+
+draw_fdp_power_curve(experiment, X_types, sample_size,
+                     method_names, method_colors, method_shapes,
+                     error_bar = F, direction = F)
+
+```
+
+# Combine the two ideas
+
+Let's combine the two ideas ($\cR^pckn$ should be adjusted to be consistent with $\cR^kckn$).
+
+Please see the results below. cKnockoff1-cali-kn is the method that combine the two ideas. We have a substantial power gain over cKnockoff but it still doesn't fully beat cKnockoff(0.8).
+
+```{r combine, fig.height=7, fig.cap = "Performance of the combined method, denoted as cKnockoff1-cali-kn. m = 100."}
+experiment <- "test"
+X_types <- c("IID_Normal", "MCC", "Homo_Block")
+sample_size <- 100
+methods_show <- 1:7
+method_names <- method_names_all[methods_show]
+method_colors <- method_colors_all[methods_show]
+method_shapes <- method_shapes_all[methods_show]
+
+draw_fdp_power_curve(experiment, X_types, sample_size,
+                     method_names, method_colors, method_shapes,
+                     error_bar = F, direction = F)
+
+```

@@ -14,6 +14,19 @@ This repo hosts the code used to generate figures in the cKnockoff paper.
 
 `log/`: store the Slurm logs.
 
+### Dependency
+
+Required packages:
+- dbh: `devtools::install_github("lihualei71/dbh")`
+- knockoff
+- cknockoff: `devtools::install_github("yixiangluo/cknockoff")`
+- glmnet
+- KernSmooth
+- here
+- abind
+- foreach
+- doParallel
+
 ## Usage
 
 ### FDR and Power
