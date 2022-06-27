@@ -17,7 +17,7 @@ source(here("R", "plot.R"))
 
 experiment <- "kn_conservative"
 
-p <- 1000
+p <- 100
 n <- 3*p
 X_type <- "MCC_Block"
 X_seed <- 2021
@@ -29,15 +29,15 @@ noise <- quote(rnorm(n))
 target <- 0.5
 target_at_alpha <- 0.2
 
-sample_size <- 100
+sample_size <- 1000
 
 n_cores <- 14
 
 knockoffs <- create.fixed
 statistic <- stat.glmnet_coefdiff_tiebreak
 
-# alphas <- seq(from = 0.005, to = 0.3, length.out = 100)
-alphas <- seq(from = 0.05, to = 0.2, by = 0.05)
+alphas <- seq(from = 0.005, to = 0.3, length.out = 100)
+# alphas <- seq(from = 0.05, to = 0.2, by = 0.05)
 
 
 

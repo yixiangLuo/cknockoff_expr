@@ -15,7 +15,7 @@ source(here("R", "methods.R"))
 
 experiment <- "ROC_compare"
 
-p <- 100
+p <- 1000
 n <- 3*p
 X_type <- "MCC_Block"
 X_seed <- 2021
@@ -97,7 +97,7 @@ results <- foreach(iter = 1:sample_size) %dopar% {
 
 grid_num <- 5000
 x_points <- seq(from = 0, to = 0.5, length.out = grid_num)
-x_var <- "FDP"
+x_var <- "FPP" # FDP
 
 TPP_OLS <- sapply(results, function(result){
     approx(x = result$OLS_ROC[[x_var]], 
@@ -146,8 +146,8 @@ ggplot(plot_data) +
 #                     ncol = 2, nrow = 1,
 #                     common.legend = T, legend = "right")
 
-# ggsave(filename = here("figs", paste0("ROC_compare.pdf")),
-#        plot, width = 4.5, height = 3.5)
+ggsave(filename = here("figs", paste0("ROC_compare.pdf")),
+       width = 4, height = 3)
 # ggsave(filename = here("figs", paste0("ROC_compare.pdf")),
 #        figure, width = 6.5, height = 2.5)
 

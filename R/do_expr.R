@@ -79,7 +79,7 @@ for(X_type in X_types){
 # method_names <- c("BH", "knockoff", "cKnockoff", "cKnockoff_STAR")
 # method_colors <- unname(multi_method_color[method_names])
 # method_shapes <- unname(multi_method_shape[method_names])
-# method_shapes <- rep(19, 4)
+# method_shapes <- rep(19, length(method_names))
 
 # X_types <- c("IID_Normal", "MCC", "MCC_Block")
 draw_fdp_power_curve(experiment, X_types, sample_size,

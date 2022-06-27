@@ -1,6 +1,7 @@
 library(here)
 library(tidyverse)
 library(latex2exp)
+library(scales)
 # library(cowplot)
 
 source(here("R", "utils.R"))
@@ -303,16 +304,21 @@ draw_kn_conservative <- function(experiment){
     load(here("data", paste0(experiment, ".RData")))
     
     quant_names <- rownames(results)[1:(NROW(results)-1)]
-    quant_colors <- c("#a6bddb", "#fc8d59", "#2b8cbe", "#d95f0e", "#045a8d", "#333333",
-                      "#2b8cbe", "#045a8d", "#333333")
-    quant_labels <- unname(TeX(c("$M_0 \\alpha$", "$M_{\\tau} \\alpha$", "$b \\, (H_{0})$", "$M_{\\tau_{0}} \\alpha$", "$b^0 \\, (H_{0})$", "FDR",
+    # quant_colors <- c("#a6bddb", "#fc8d59", "#2b8cbe", "#d95f0e", "#045a8d", "#333333",
+    #                   "#2b8cbe", "#045a8d", "#333333")
+    quant_colors <- c("#333333", "#fc8d59", "#d7191c", "#d95f0e", "#4a00f3", "#3182bd",
+                      "#2b8cbe", "#4a00f3", "#3182bd")
+    quant_labels <- unname(TeX(c("$\\alpha \\cdot E\\, M_0 $", "$M_{\\tau} \\alpha$", "$E\\, \\sum_{j \\in H_{0}} b_j$", "$M_{\\tau_{0}} \\alpha$", "$E\\, \\sum_{j \\in H_{0}} b^0_j$", "FDR",
                                  "$b \\, (H_{1})$", "$b^0 \\, (H_{1})$", "TDR")))
     solid <- c(0, 0, 1, 0, 0, 0)
     
-    quant_to_show <- list(c("M_0", "M_tau0", "b0_F", "FDR", "alpha"),
-                          c("M_0", "M_tau", "b_F", "M_tau0", "b0_F", "FDR", "alpha"),
-                          c("b_T", "b0_T", "TDR", "alpha"))
-    figure_appendix <- c("init", "full", "power")
+    # quant_to_show <- list(c("M_0", "M_tau0", "b0_F", "FDR", "alpha"),
+    #                       c("M_0", "M_tau", "b_F", "M_tau0", "b0_F", "FDR", "alpha"),
+    #                       c("b_T", "b0_T", "TDR", "alpha"))
+    # figure_appendix <- c("init", "full", "power")
+    quant_to_show <- list(c("M_0", "b0_F", "FDR", "alpha"),
+                          c("M_0", "b_F", "b0_F", "FDR", "alpha"))
+    figure_appendix <- c("init", "full")
     
     for(fig_i in 1:length(figure_appendix)){
         kn.conservative <- data.frame(t(results)) %>%
@@ -323,11 +329,13 @@ draw_kn_conservative <- function(experiment){
         
         
         plot <- ggplot(kn.conservative) +
-            geom_ribbon(aes(x = alpha, ymax = value, fill = quantity), ymin = 0, alpha = 1) +
-            geom_line(aes(x = alpha, y = value, color = quantity, alpha = quantity)) +
+            # geom_ribbon(aes(x = alpha, ymax = value, fill = quantity), ymin = 0, alpha = 1) +
+            geom_line(aes(x = alpha, y = value, color = quantity)) +
+            # geom_line(aes(x = alpha, y = value, color = quantity, alpha = quantity)) +
             scale_color_manual(values = quant_colors, labels = quant_labels, breaks = quant_names) +
-            scale_fill_manual(values = quant_colors, labels = quant_labels, breaks = quant_names) +
-            scale_alpha_manual(values = solid, labels = quant_labels, breaks = quant_names) +
+            # scale_fill_manual(values = quant_colors, labels = quant_labels, breaks = quant_names) +
+            # scale_alpha_manual(values = solid, labels = quant_labels, breaks = quant_names) +
+            scale_y_continuous(labels = percent) +
             theme_light() +
             theme(aspect.ratio = 1,
                   panel.grid = element_blank(),
