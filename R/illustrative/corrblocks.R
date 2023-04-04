@@ -140,7 +140,7 @@ points(z2, col=1+nn.pattern, pch=1+15*nn.pattern, cex=1+0.5*nn.pattern)
 
 p <- length(z)
 n <- 5*p
-blockSigma <- matrix(rho, block.size, block.size)
+blockSigma <- matrix(rho^2, block.size, block.size)
 diag(blockSigma) <- 1
 beta_cov <- as.matrix(diag(n.blocks) %x% blockSigma)
 cov_mat <- solve(beta_cov)

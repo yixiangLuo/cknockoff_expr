@@ -308,7 +308,7 @@ draw_kn_conservative <- function(experiment){
     #                   "#2b8cbe", "#045a8d", "#333333")
     quant_colors <- c("#333333", "#fc8d59", "#d7191c", "#d95f0e", "#4a00f3", "#3182bd",
                       "#2b8cbe", "#4a00f3", "#3182bd")
-    quant_labels <- unname(TeX(c("$\\alpha \\cdot E\\, M_0 $", "$M_{\\tau} \\alpha$", "$E\\, \\sum_{j \\in H_{0}} b_j$", "$M_{\\tau_{0}} \\alpha$", "$E\\, \\sum_{j \\in H_{0}} b^0_j$", "FDR",
+    quant_labels <- unname(TeX(c("$\\alpha $", "$M_{\\tau} \\alpha$", "$E\\, \\sum_{j \\in H_{0}} b_j$", "$M_{\\tau_{0}} \\alpha$", "$E\\, \\sum_{j \\in H_{0}} b^0_j$", "FDR",
                                  "$b \\, (H_{1})$", "$b^0 \\, (H_{1})$", "TDR")))
     solid <- c(0, 0, 1, 0, 0, 0)
     
@@ -316,9 +316,8 @@ draw_kn_conservative <- function(experiment){
     #                       c("M_0", "M_tau", "b_F", "M_tau0", "b0_F", "FDR", "alpha"),
     #                       c("b_T", "b0_T", "TDR", "alpha"))
     # figure_appendix <- c("init", "full", "power")
-    quant_to_show <- list(c("M_0", "b0_F", "FDR", "alpha"),
-                          c("M_0", "b_F", "b0_F", "FDR", "alpha"))
-    figure_appendix <- c("init", "full")
+    quant_to_show <- list(c("M_0", "b_F", "FDR", "alpha"))
+    figure_appendix <- c("brief")
     
     for(fig_i in 1:length(figure_appendix)){
         kn.conservative <- data.frame(t(results)) %>%
@@ -354,6 +353,53 @@ draw_kn_conservative <- function(experiment){
     invisible()
 }
 
-
+draw_power_gain <- function(){
+    load(here("data", paste0("power_gain", ".RData")))
+    set_names <- names(results)
+    X_types <- unique(sapply(set_names, function(set_name){
+        str_split(set_name, pattern = "_D_")[[1]][1]
+    }))
+    powers <- unique(sapply(set_names, function(set_name){
+        str_split(set_name, pattern = "_D_")[[1]][2]
+    }))
+    m1s <- unique(sapply(set_names, function(set_name){
+        str_split(set_name, pattern = "_D_")[[1]][3]
+    }))
+    
+    data <- c()
+    for(X_type in X_types){
+        for(power in powers){
+            for(m1 in m1s){
+                res <- results[[paste(X_type, power, m1, sep = "_D_")]]$FDR_Power
+                data <- rbind(data, data.frame(design_mat = str_replace(X_type, "_", "-"),
+                                               power = power, m1 = m1,
+                                               power_gain = (res$mean[4] - res$mean[3])))
+            }
+        }
+    }
+    X_types <- str_replace(X_types, "_", "-")
+    
+    plot <- ggplot(data, aes(x = power, y = m1)) +
+        geom_tile(aes(fill = power_gain)) +
+        facet_grid(NULL,
+                   vars(factor(design_mat, levels = X_types)), scales="free") +
+        geom_text(aes(label = round(power_gain, 2)), size = 3, color = "white") +
+        scale_fill_continuous(name = "Power Gain") +
+        theme_bw() +
+        theme(aspect.ratio = 1,
+              panel.grid = element_blank(),
+              strip.text = element_text(size = 15),
+              axis.title = element_text(size = 13),
+              axis.text = element_text(size = 10),
+              legend.position = "right",
+              legend.title=element_text(size=9),
+              legend.text=element_text(size=9)) +
+        labs(x = "signal strength", y = "# nonnull variables")
+    
+    ggsave(filename = here("figs", paste0("power_gain.pdf")),
+           plot, width = 7, height = 3)
+    
+    return(plot)
+}
 
 

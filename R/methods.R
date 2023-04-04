@@ -107,7 +107,7 @@ BonfBH <- function(X, y, alpha, BonfBH_X = NULL){
 }
 
 
-get_multi_method_list <- function(X, knockoffs, statistic, method_names){
+get_multi_method_list <- function(X, knockoffs, statistic, method_names, Xcov.true = NA){
     
     methods <- list()
     
@@ -117,7 +117,7 @@ get_multi_method_list <- function(X, knockoffs, statistic, method_names){
     }
     if("knockoff" %in% method_names | "cKnockoff" %in% method_names | 
        "cKnockoff_STAR" %in% method_names){
-        X.pack <- process_X(X, knockoffs = knockoffs, intercept = F)
+        X.pack <- cknockoff::process_X(X, knockoffs = knockoffs, intercept = F)
     }
     if("BonBH" %in% method_names){
         BonfBH_X <- precompute_BonfBH_X(X)
@@ -224,15 +224,57 @@ get_multi_method_list <- function(X, knockoffs, statistic, method_names){
             return(list(selected = result$selected, sign_predict = result$sign_predict))
         }
     }
+    if("cLasso" %in% method_names){
+        methods$cLasso <- function(y, X, alpha){
+            result <- cLasso(X, y, alpha)
+            return(list(selected = result$selected))
+        }
+    }
+    
+    if("knockoff.MX" %in% method_names){
+        methods$knockoff.MX <- function(y, X, alpha){
+            Sigma.inv <- solve(Xcov.true)
+            s <- knockoff:::create.solve_sdp(Xcov.true)
+            s[s <= 1e-5] <- 0
+            
+            Xk_mumat <- diag(p) - Sigma.inv %*% diag(s)
+            mu_kn <- X %*% Xk_mumat
+            cov_kn <- 2 * diag(s) - diag(s) %*% Sigma.inv %*% diag(s)
+            cov_kn_half <- chol(cov_kn)
+            
+            X_kn <<- ckn.modelX:::rnorm_mult(mu_kn, cov_kn_half)
+            
+            if("sigma_tilde" %in% names(formals(statistic))){
+                kn_stats_obs <- statistic(X, X_kn, y, sigma_tilde = 1)
+            } else{
+                kn_stats_obs <- statistic(X, X_kn, y)
+            }
+            
+            result <- ckn.modelX:::kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
+            sign_predict <- rep(NA, p)
+            
+            return(list(selected = result$selected, sign_predict = sign_predict))
+        }
+    }
+    if("cKnockoff.MX" %in% method_names){
+        methods$cKnockoff.MX <- function(y, X, alpha){
+            result <- ckn.modelX::cknockoff.MX(X, y, Xcov.true, X_kn,
+                                               statistic = statistic,
+                                               alpha = alpha,
+                                               family = "binomial",
+                                               n_cores = 1)
+            return(list(selected = result$selected, sign_predict = rep(NA, p)))
+        }
+    }
 
     return(methods)
 }
 
-multi_method_color <- c("#984ea3", "dodgerblue3", "#333333", "#006d2c", "#33a02c", "red", "orange1")
-names(multi_method_color) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
+multi_method_color <- c("#984ea3", "dodgerblue3", "#333333", "#006d2c", "#33a02c", "red", "orange1", "orange1", "#333333", "red")
+names(multi_method_color) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR", "cLasso", "knockoff.MX", "cKnockoff.MX")
 
-multi_method_shape <- c(3, 4, 17, 6, 23, 19, 15)
-names(multi_method_shape) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR")
+multi_method_shape <- c(3, 4, 17, 6, 23, 19, 15, 19, 17, 19)
+names(multi_method_shape) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR", "cLasso", "knockoff.MX", "cKnockoff.MX")
 
 
 get_kn_method_list <- function(X, knockoffs, statistic, method_names){

@@ -15,6 +15,9 @@ source(here("R", "plot.R"))
 # source(here("R", "settings", "knockoff_stats.R"))
 # source(here("R", "settings", "robust_tNoise.R"))
 # source(here("R", "settings", "robust_noisyBeta.R"))
+# source(here("R", "settings", "cLasso.R"))
+source(here("R", "settings", "ModelX.R"))
+# source(here("R", "settings", "power_gain.R"))
 
 
 args <- commandArgs(trailingOnly=TRUE)
@@ -36,20 +39,26 @@ results <- lapply(1:length(X_types), function(iter_i){
   posit_type <- posit_types[iter_i]
   X_title <- X_titles[iter_i]
   random_X <- random_Xs[iter_i]
+  if(exists("targets")) target <- targets[iter_i]
+  if(exists("pi1s")) pi1 <- pi1s[iter_i]
+  
+  print(paste(X_type, pi1, target))
 
   if(!random_X){
-    X <- gene_X(X_type, n, p, X_seed)
+    X <- gene_X(X_type, n, p, X_seed)$X
     random_X.data <- list(random_X = random_X)
-    mu1 <- BH_lm_calib(X, random_X.data, pi1, noise = quote(rnorm(n)),
-                       posit_type, 1, side = "two", nreps = 200,
-                       alpha = target_at_alpha, target = target, n_cores = n_cores)
+    mu1 <- signal_calib(calib_method, X, random_X.data, pi1, noise = quote(rnorm(n)),
+                        posit_type, 1, side = "two", nreps = 20,
+                        alpha = target_at_alpha, target = target, n_cores = n_cores)
   } else{
+    X.res <- gene_X(X_type, n, p, X_seed)
     X <- NA
     random_X.data <- list(random_X = random_X,
-                          n = n, p = p, X_type = X_type, sample_num = 5)
-    mu1 <- BH_lm_calib(X, random_X.data, pi1, noise = quote(rnorm(n)),
-                       posit_type, 1, side = "two", nreps = 200,
-                       alpha = target_at_alpha, target = target, n_cores = n_cores)
+                          n = n, p = p, X_type = X_type, Xcov.true = X.res$Xcov.true,
+                          sample_num = 5)
+    mu1 <- signal_calib(calib_method, X, random_X.data, pi1, noise = quote(rnorm(n)),
+                        posit_type, 1, side = "two", nreps = 20,
+                        alpha = target_at_alpha, target = target, n_cores = n_cores)
   }
 
   problem_setting <- list(n = n, p = p,
@@ -79,6 +88,7 @@ for(X_type in X_types){
 # method_names <- c("BH", "knockoff", "cKnockoff", "cKnockoff_STAR")
 # method_colors <- unname(multi_method_color[method_names])
 # method_shapes <- unname(multi_method_shape[method_names])
+# method_colors <- c("#984ea3", "dodgerblue3", "#333333", "orange1", "red")
 # method_shapes <- rep(19, length(method_names))
 
 # X_types <- c("IID_Normal", "MCC", "MCC_Block")
@@ -86,6 +96,7 @@ draw_fdp_power_curve(experiment, X_types, sample_size,
                      method_names, method_colors, method_shapes,
                      error_bar = F, direction = F)
 
+# draw_power_gain()
 
 # method_names <- c("BH", "dBH", "knockoff", "cKnockoff", "cKnockoff_STAR")
 # method_colors <- unname(multi_method_color[method_names])

@@ -70,7 +70,7 @@ runtime.result <- lapply(X_types, function(X_type){
       runtime <- foreach(iter = 1:n_round) %dopar% {
       # runtime <- sapply(1:n_round, function(iter){
         
-        X <- gene_X(X_type, n, p, iter)
+        X <- gene_X(X_type, n, p, iter)$X
         
         y <- X %*% beta + eval(noise)
         

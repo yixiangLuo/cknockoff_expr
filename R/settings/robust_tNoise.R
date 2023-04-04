@@ -35,6 +35,7 @@ makeup_vectors(alphas = alphas, beta_permutes = beta_permutes, noises = noises)
 
 target <- 0.5
 target_at_alpha <- 0.2
+calib_method <- "BH"
 
 sample_size <- 400
 n_cores <- 14

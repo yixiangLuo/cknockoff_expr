@@ -32,7 +32,7 @@ sample_size <- 100
 n_cores <- 14
 
 
-X <- gene_X(X_type, n, p, X_seed)
+X <- gene_X(X_type, n, p, X_seed)$X
 
 random_X.data <- list(random_X = F)
 mu1 <- BH_lm_calib(X, random_X.data, pi1, noise, posit_type, 1,

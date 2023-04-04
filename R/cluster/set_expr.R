@@ -25,24 +25,27 @@ for(X_iter in 1:length(X_types)){
   posit_type <- posit_types[X_iter]
   random_X <- random_Xs[X_iter]
   # random_X <- T
+  if(exists("targets")) target <- targets[X_iter]
+  if(exists("pi1s")) pi1 <- pi1s[X_iter]
   
   if(!random_X){
-    X <- gene_X(X_type, n, p, X_seed)
+    X <- gene_X(X_type, n, p, X_seed)$X
     
     random_X.data <- list(random_X = random_X)
-    mu1 <- BH_lm_calib(X, random_X.data, pi1, noise = quote(rnorm(n)),
-                       posit_type, 1, side = "two", nreps = 200,
-                       alpha = target_at_alpha, target = target, n_cores = n_cores)
+    mu1 <- signal_calib(calib_method, X, random_X.data, pi1, noise = quote(rnorm(n)),
+                        posit_type, 1, side = "two", nreps = 200,
+                        alpha = target_at_alpha, target = target, n_cores = n_cores)
     
     method_list <- get_method_list(X, knockoffs, statistic, method_names)
   } else{
+    X.res <- gene_X(X_type, n, p, X_seed)
     X <- NA
-    
     random_X.data <- list(random_X = random_X,
-                          n = n, p = p, X_type = X_type, sample_num = 5)
-    mu1 <- BH_lm_calib(X, random_X.data, pi1, noise = quote(rnorm(n)),
-                       posit_type, 1, side = "two", nreps = 200,
-                       alpha = target_at_alpha, target = target, n_cores = n_cores)
+                          n = n, p = p, X_type = X_type, Xcov.true = X.res$Xcov.true,
+                          sample_num = 5)
+    mu1 <- signal_calib(calib_method, X, random_X.data, pi1, noise = quote(rnorm(n)),
+                        posit_type, 1, side = "two", nreps = 200,
+                        alpha = target_at_alpha, target = target, n_cores = n_cores)
     
     method_list <- NA
   }

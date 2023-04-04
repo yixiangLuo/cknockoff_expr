@@ -39,13 +39,15 @@ get_fdp_power <- function(problem_setting, beta_permutes = NA,
             set.seed(iter)
             
             if(problem_setting$random_X){
-                X <- gene_X(problem_setting$X_type,
-                            problem_setting$n,
-                            problem_setting$p,
-                            iter)
+                X.res <- gene_X(problem_setting$X_type,
+                                problem_setting$n,
+                                problem_setting$p,
+                                iter)
+                X <- X.res$X
                 method_list <- get_method_list(X, problem_setting$knockoffs,
                                                problem_setting$statistic,
-                                               problem_setting$method_names)
+                                               problem_setting$method_names,
+                                               X.res$Xcov.true)
             }
             
             beta <- genmu(problem_setting$p, problem_setting$pi1,
@@ -54,7 +56,11 @@ get_fdp_power <- function(problem_setting, beta_permutes = NA,
           
             eval(beta_permute)
 
-            y <- X %*% beta + eval(noise)
+            # y <- X %*% beta + eval(noise)
+            suc_prob <- exp(X %*% beta) / (exp(X %*% beta) + 1)
+            y <- sapply(1:n, function(obs_i){
+                rbinom(1, 1, suc_prob[obs_i])
+            })
             # save(X, y, alpha, file = "debug.RData")
 
             sign_beta <- sign(beta)

@@ -41,7 +41,7 @@ alphas <- seq(from = 0.005, to = 0.3, length.out = 100)
 
 
 
-X <- gene_X(X_type, n, p, X_seed)
+X <- gene_X(X_type, n, p, X_seed)$X
 X.pack <- process_X(X, knockoffs = knockoffs, intercept = F)
 
 random_X.data <- list(random_X = F)

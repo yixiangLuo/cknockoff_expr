@@ -39,9 +39,11 @@ for(expr_index in job_expr_indeces){
   
   setting <- X_data[[expr_index$X_index]]
   if(setting$random_X){
-      X <- gene_X(setting$X_type, setting$n, setting$p, expr_index$expr_id)
+      X.res <- gene_X(setting$X_type, setting$n, setting$p, expr_index$expr_id)
+      X <- X.res$X
       method_list <- get_method_list(X, setting$knockoffs, setting$statistic,
-                                     setting$method_names)
+                                     setting$method_names,
+                                     X.res$Xcov.true)
   } else{
       X <- setting$X
       method_list <- setting$method_list

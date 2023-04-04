@@ -10,24 +10,36 @@ gene_X <- function(X_type = "IID_Normal", n, p, X_seed = NULL){
         set.seed(X_seed)
     }
     
+    X_type <- str_split(X_type, pattern = "_D_")[[1]][1]
+    
+    model_X <- F # set False if experiment with fixed-X
+    if(model_X){
+        basis <- matrix(rnorm(n*p), n)
+    } else{
+        basis <- qr.Q(qr(matrix(rnorm(n*p), n)))
+    }
+    
     cor_radius <- 5
     if(X_type == "IID_Normal"){
-        X <- matrix(rnorm(n*p), n) / sqrt(n)
+        cov_mat <- diag(p)
+        X <- matrix(rnorm(n*p), n)
     } else if(X_type == "Coef_AR"){
         rho <- 0.5
         
         cov_mat <- solve(rho^(abs(outer(1:p, 1:p, "-"))))
+        normalizer <- diag(1 / sqrt(diag(cov_mat)))
+        cov_mat <- normalizer %*% cov_mat %*% normalizer
         
         R <- chol(cov_mat)
-        basis <- qr.Q(qr(matrix(rnorm(n*p), n)))
         X <- basis %*% R
     } else if(X_type == "X_AR"){
         rho <- 0.5
         
         cov_mat <- rho^(abs(outer(1:p, 1:p, "-")))
+        normalizer <- diag(1 / sqrt(diag(cov_mat)))
+        cov_mat <- normalizer %*% cov_mat %*% normalizer
         
         R <- chol(cov_mat)
-        basis <- qr.Q(qr(matrix(rnorm(n*p), n)))
         X <- basis %*% R
     } else if(X_type == "Homo_Block"){
         rho <- 0.5
@@ -37,9 +49,10 @@ gene_X <- function(X_type = "IID_Normal", n, p, X_seed = NULL){
         diag(blockSigma) <- 1
 
         cov_mat <- as.matrix(diag(p / block_size) %x% blockSigma)
+        normalizer <- diag(1 / sqrt(diag(cov_mat)))
+        cov_mat <- normalizer %*% cov_mat %*% normalizer
         
         R <- chol(cov_mat)
-        basis <- qr.Q(qr(matrix(rnorm(n*p), n)))
         X <- basis %*% R
     } else if(X_type == "MCC"){
         if(n %% (p+1) == 0){
@@ -54,7 +67,6 @@ gene_X <- function(X_type = "IID_Normal", n, p, X_seed = NULL){
             diag(cov_mat) <- 1
             
             R <- chol(cov_mat)
-            basis <- qr.Q(qr(matrix(rnorm(n*p), n)))
             X <- basis %*% R
         }
     } else if(X_type == "MCC_Block"){
@@ -66,7 +78,6 @@ gene_X <- function(X_type = "IID_Normal", n, p, X_seed = NULL){
         cov_mat <- as.matrix(diag(p / block_size) %x% blockSigma)
         
         R <- chol(cov_mat)
-        basis <- qr.Q(qr(matrix(rnorm(n*p), n)))
         X <- basis %*% R
     } else if(X_type == "Sparse"){
         sparsity <- 0.01
@@ -75,8 +86,9 @@ gene_X <- function(X_type = "IID_Normal", n, p, X_seed = NULL){
         X[lower_tri] <- replicate(sum(lower_tri), rbinom(1, 1, sparsity))
     }
     # X <- scale(X, center = FALSE, scale = sqrt(colSums(X^2)))
+    if(!exists("cov_mat")) cov_mat <- NA
 
-    return(X)
+    return(list(X = X, Xcov.true = cov_mat))
 }
 
 corr_noise <- function(n, rho){
@@ -136,6 +148,28 @@ calc_FDP_power <- function(rejs, H0, sign_predict = NULL, sign_beta = NULL){
     return(c(FDP, power, FDP_dir, power_dir))
 }
 
+signal_calib <- function(method,
+                         X, random_X.data,
+                         pi1, noise = quote(rnorm(n)),
+                         mu_posit_type, mu_size_type,
+                         side,
+                         nreps = 200,
+                         alpha = 0.05,
+                         target = 0.3,
+                         n_cores = 7){
+    calib_method <- if(method == "BH"){
+        BH_lm_calib
+    } else if(method == "lasso"){
+        lasso_calib
+    } else if(method == "MXkn"){
+        MXkn_calib
+    }
+    
+    return(calib_method(X, random_X.data,
+                        pi1, noise,
+                        mu_posit_type, mu_size_type,
+                        side, nreps, alpha, target, n_cores))
+}
 
 ## calibrate signal strength, modified from Lihua
 BH_lm_calib <- function(X, random_X.data,
@@ -159,7 +193,7 @@ BH_lm_calib <- function(X, random_X.data,
         Sigma_list <- list(solve(t(X) %*% X))
     } else{
         X_list <- lapply(1:random_X.data$sample_num, function(i){
-            gene_X(random_X.data$X_type, n, p, i)
+            gene_X(random_X.data$X_type, n, p, i)$X
         })
         Sigma_list <- lapply(X_list, function(X){
             solve(t(X) %*% X)
@@ -205,6 +239,173 @@ BH_lm_calib <- function(X, random_X.data,
     upper <- 10
     while (TRUE & upper < 1000){
         tmp <- try(uniroot(BH_power, c(lower, upper))$root)
+        if (class(tmp) == "try-error"){
+            upper <- upper * 2
+        } else {
+            return(tmp)
+        }
+    }
+    return(NA)
+}
+
+lasso_calib <- function(X, random_X.data,
+                        pi1, noise = quote(rnorm(n)),
+                        mu_posit_type, mu_size_type,
+                        side,
+                        nreps = 200,
+                        alpha = 0.05,
+                        target = 0.3,
+                        n_cores = 7){
+    if(!random_X.data$random_X){
+        n <- nrow(X)
+        p <- ncol(X)
+    } else{
+        n <- random_X.data$n
+        p <- random_X.data$p
+    }
+    
+    if(!random_X.data$random_X){
+        X_list <- list(X)
+    } else{
+        X_list <- lapply(1:random_X.data$sample_num, function(i){
+            gene_X(random_X.data$X_type, n, p, i)$X
+        })
+    }
+    X_sample_num <- length(X_list)
+    
+    beta_list <- lapply(1:nreps, function(i){
+        beta <- genmu(p, pi1, 1, mu_posit_type, mu_size_type)
+        if (side == "right"){
+            beta <- abs(beta)
+        } else if (side == "left"){
+            beta <- -abs(beta)
+        }
+        return(beta)
+    })
+    eps_list <- lapply(1:nreps, function(i){
+        eval(noise)
+    })
+    
+    registerDoParallel(n_cores)
+    
+    sel_power <- function(mu1){
+        power <- unlist(foreach(i = 1:nreps) %dopar% {
+            H0 <- beta_list[[i]] == 0            
+            beta <- beta_list[[i]] * mu1
+            eps <- eps_list[[i]]
+            
+            X <- X_list[[(i%%X_sample_num)+1]]
+            
+            y <- X %*% beta + eps
+            
+            lasso.select <- as.matrix(glmnet::glmnet(X, y, intercept = F)$beta != 0)
+            nrej_power <- sapply(1:NCOL(lasso.select), function(lambda_i){
+                c(sum(lasso.select[, lambda_i]),
+                  calc_FDP_power(which(lasso.select[, lambda_i]), H0)[2])
+            })
+            index <- which.min(abs(nrej_power[1, ] - p*pi1))
+            power_sample <- nrej_power[2, index]
+            
+            return(power_sample)
+        })
+        mean(power) - target
+    }
+    
+    lower <- 0
+    upper <- 10
+    while (TRUE & upper < 1000){
+        tmp <- try(uniroot(sel_power, c(lower, upper))$root)
+        if (class(tmp) == "try-error"){
+            upper <- upper * 2
+        } else {
+            return(tmp)
+        }
+    }
+    return(NA)
+}
+
+
+MXkn_calib <- function(X, random_X.data,
+                       pi1, noise = quote(rnorm(n)),
+                       mu_posit_type, mu_size_type,
+                       side,
+                       nreps = 200,
+                       alpha = 0.05,
+                       target = 0.3,
+                       n_cores = 7,
+                       family = "guassian"){
+    family <- "binomial"   # change accordingly: "guassian", "binomial"
+    
+    n <- random_X.data$n
+    p <- random_X.data$p
+    Xcov.true <- random_X.data$Xcov.true
+    
+    Sigma.inv <- solve(Xcov.true)
+    s <- knockoff:::create.solve_sdp(Xcov.true)
+    s[s <= 1e-5] <- 0
+    
+    Xk_mumat <- diag(p) - Sigma.inv %*% diag(s)
+    cov_kn <- 2 * diag(s) - diag(s) %*% Sigma.inv %*% diag(s)
+    cov_kn_half <- chol(cov_kn)
+    
+    X_list <- lapply(1:random_X.data$sample_num, function(i){
+        gene_X(random_X.data$X_type, n, p, i)$X
+    })
+    X_kn_list <- lapply(1:random_X.data$sample_num, function(i){
+        X <- X_list[[i]]
+        mu_kn <- X %*% Xk_mumat
+        ckn.modelX:::rnorm_mult(mu_kn, cov_kn_half)
+    })
+    
+    X_sample_num <- length(X_list)
+    
+    beta_list <- lapply(1:nreps, function(i){
+        beta <- genmu(p, pi1, 1, mu_posit_type, mu_size_type)
+        if (side == "right"){
+            beta <- abs(beta)
+        } else if (side == "left"){
+            beta <- -abs(beta)
+        }
+        return(beta)
+    })
+    
+    registerDoParallel(n_cores)
+    
+    sel_power <- function(mu1){
+        power <- unlist(foreach(i = 1:nreps) %dopar% {
+            H0 <- beta_list[[i]] == 0            
+            beta <- beta_list[[i]] * mu1
+            
+            X <- X_list[[(i%%X_sample_num)+1]]
+            X_kn <- X_kn_list[[(i%%X_sample_num)+1]]
+            
+            if(family == "guassian"){
+                y <- X %*% beta + eval(noise)
+            } else{
+                suc_prob <- exp(X %*% beta) / (exp(X %*% beta) + 1)
+                y <- sapply(1:n, function(obs_i){
+                    rbinom(1, 1, suc_prob[obs_i])
+                })
+            }
+            
+            if("sigma_tilde" %in% names(formals(statistic))){
+                kn_stats_obs <- statistic(X, X_kn, y, sigma_tilde = 1)
+            } else{
+                kn_stats_obs <- statistic(X, X_kn, y)
+            }
+            
+            rejs_mxKn <- ckn.modelX:::kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)$selected
+            power_sample <- calc_FDP_power(rejs_mxKn, H0)[2]
+            
+            return(power_sample)
+        })
+        mean(power) - target
+    }
+    
+    lower <- 0
+    upper <- 10
+    while (TRUE & upper < 1000){
+        tmp <- try(uniroot(sel_power, c(lower, upper))$root)
         if (class(tmp) == "try-error"){
             upper <- upper * 2
         } else {
@@ -335,6 +536,7 @@ with_seed = function(seed, expr) {
     expr
 }
 
+library(stringr)
 
 # convert a digit to a string
 digit_to_char <- function(number){
