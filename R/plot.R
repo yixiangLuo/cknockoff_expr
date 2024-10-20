@@ -2,7 +2,7 @@ library(here)
 library(tidyverse)
 library(latex2exp)
 library(scales)
-# library(cowplot)
+# library(cowplot) 
 
 source(here("R", "utils.R"))
 
@@ -78,10 +78,167 @@ draw_fdp_power_curve <- function(experiment, X_types, sample_size = 1,
               legend.position = "right",
               legend.title=element_text(size=9),
               legend.text=element_text(size=9)) +
-        labs(x = fig_x_var$name, y = "Estimated FDR/Power")
+        labs(x = fig_x_var$name, y = "Estimated FDR or Power")
 
     ggsave(filename = here("figs", paste0("simu-", experiment, ".pdf")),
            plot, width = 7, height = 2*(length(X_types)+1)-1)
+    
+    return(plot)
+}
+
+# fdp and power of the methods
+draw_fdp_power_curve_hrz <- function(experiment, X_types, sample_size = 1,
+                                     method_names, method_colors, method_shapes,
+                                     error_bar = F, direction = F){
+    load(here("data", paste0(experiment, ".RData")))
+    
+    fdr_power <- lapply(X_types, function(X_type){
+        results[[X_type]]$FDR_Power %>% mutate(design_mat = str_replace(X_type, "_", "-"))
+    })
+    fdr_power <- do.call(rbind, fdr_power)
+    X_types <- str_replace(X_types, "_", "-")
+    rm(results)
+    
+    dir <- direction
+    fdr_power <- fdr_power %>% 
+        filter(direction == dir,
+               design_mat %in% X_types,
+               method_name %in% method_names) %>%
+        arrange(methods)
+    
+    methods_level <- unique(fdr_power$methods)
+    # alphas <- unique(fdr_power$alpha)
+    
+    method_names <- parse_name(method_names)
+    
+    ref_prototype <- data.frame(fig_x = c(fig_x_var$value, fig_x_var$value),
+                                threshold = c(unlist(alphas), rep(NA, length(fig_x_var$value))),
+                                type = rep(c("FDR", "Power"), each = length(fig_x_var$value)))
+    reference <- lapply(X_types, function(X_type){
+        ref_prototype %>% mutate(design_mat = X_type)
+    })
+    reference <- do.call(rbind, reference)
+    
+    add_error_bar <- if(error_bar){
+        quote(
+            geom_errorbar(aes(x = fig_x, y = mean,
+                              ymin = mean-2*std/sqrt(sample_size),
+                              ymax = mean+2*std/sqrt(sample_size),
+                              color = methods), width=0.05,
+                          position = position_dodge(width=0.01))
+        )
+    } else{ NULL }
+    
+    if(fig_x_var$value[1] <= fig_x_var$value[length(fig_x_var$value)]){
+        set_x_axis <- scale_x_continuous
+    } else{
+        set_x_axis <- scale_x_reverse
+    }
+    
+    plot <- ggplot(fdr_power) +
+        geom_line(aes(x = fig_x, y = mean, color = methods)) +
+        geom_point(aes(x = fig_x, y = mean, color = methods, shape = methods), size = 2) +
+        eval(add_error_bar) +
+        geom_line(data = reference, aes(x = fig_x, y = threshold),
+                  linetype = "longdash", alpha = 0.6, na.rm = T) +
+        facet_grid(vars(factor(type, levels = c("FDR", "Power"))),
+                   vars(factor(design_mat, levels = X_types)), scales="free") +
+        # facet_wrap(vars(factor(design_mat, levels = X_types), factor(type, levels = c("FDR", "Power"))),
+        #            ncol = 2, scales="free_y") +
+        set_x_axis(breaks = fig_x_var$value, labels = fig_x_var$value) +
+        scale_color_manual(values = method_colors, labels = method_names, breaks = methods_level) +
+        scale_shape_manual(values = method_shapes, labels = method_names, breaks = methods_level) +
+        theme_bw() +
+        theme(aspect.ratio = 1,
+              panel.grid = element_blank(),
+              strip.text = element_text(size = 15),
+              axis.title = element_text(size = 13),
+              axis.text = element_text(size = 10),
+              legend.position = "right",
+              legend.title=element_text(size=9),
+              legend.text=element_text(size=9)) +
+        labs(x = fig_x_var$name, y = "Estimated FDR or Power")
+    
+    ggsave(filename = here("figs", paste0("simu-", experiment, ".pdf")),
+           plot, width = 2*(length(X_types)+1), height = 5)
+    
+    return(plot)
+}
+
+draw_fdp_curve <- function(experiment, X_types, sample_size = 1,
+                           method_names, method_colors, method_shapes,
+                           error_bar = F, direction = F){
+    load(here("data", paste0(experiment, ".RData")))
+    
+    fdr_power <- lapply(X_types, function(X_type){
+        results[[X_type]]$FDR_Power %>% mutate(design_mat = str_replace(X_type, "_", "-"))
+    })
+    fdr_power <- do.call(rbind, fdr_power)
+    X_types <- str_replace(X_types, "_", "-")
+    rm(results)
+    
+    dir <- direction
+    fdr_power <- fdr_power %>% 
+        filter(direction == dir,
+               design_mat %in% X_types,
+               method_name %in% method_names,
+               type == "FDR") %>%
+        arrange(methods)
+    
+    methods_level <- unique(fdr_power$methods)
+    # alphas <- unique(fdr_power$alpha)
+    
+    method_names <- parse_name(method_names)
+    
+    ref_prototype <- data.frame(fig_x = fig_x_var$value,
+                                threshold = unlist(alphas),
+                                type = rep("FDR", each = length(fig_x_var$value)))
+    reference <- lapply(X_types, function(X_type){
+        ref_prototype %>% mutate(design_mat = X_type)
+    })
+    reference <- do.call(rbind, reference)
+    
+    add_error_bar <- if(error_bar){
+        quote(
+            geom_errorbar(aes(x = fig_x, y = mean,
+                              ymin = mean-2*std/sqrt(sample_size),
+                              ymax = mean+2*std/sqrt(sample_size),
+                              color = methods), width=0.05,
+                          position = position_dodge(width=0.01))
+        )
+    } else{ NULL }
+    
+    if(fig_x_var$value[1] <= fig_x_var$value[length(fig_x_var$value)]){
+        set_x_axis <- scale_x_continuous
+    } else{
+        set_x_axis <- scale_x_reverse
+    }
+    
+    plot <- ggplot(fdr_power) +
+        geom_line(aes(x = fig_x, y = mean, color = methods)) +
+        geom_point(aes(x = fig_x, y = mean, color = methods, shape = methods), size = 2) +
+        eval(add_error_bar) +
+        geom_line(data = reference, aes(x = fig_x, y = threshold),
+                  linetype = "longdash", alpha = 0.6, na.rm = T) +
+        facet_grid(NULL, vars(factor(design_mat, levels = X_types)), scales="free") +
+        # facet_wrap(vars(factor(design_mat, levels = X_types), factor(type, levels = c("FDR", "Power"))),
+        #            ncol = 2, scales="free_y") +
+        set_x_axis(breaks = fig_x_var$value, labels = fig_x_var$value) +
+        scale_color_manual(values = method_colors, labels = method_names, breaks = methods_level) +
+        scale_shape_manual(values = method_shapes, labels = method_names, breaks = methods_level) +
+        theme_bw() +
+        theme(aspect.ratio = 1,
+              panel.grid = element_blank(),
+              strip.text = element_text(size = 15),
+              axis.title = element_text(size = 13),
+              axis.text = element_text(size = 10),
+              legend.position = "right",
+              legend.title=element_text(size=9),
+              legend.text=element_text(size=9)) +
+        labs(x = fig_x_var$name, y = "Estimated FDR")
+    
+    ggsave(filename = here("figs", paste0("simu-", experiment, ".pdf")),
+           plot, width = 2*(length(X_types)+1), height = 3)
     
     return(plot)
 }
@@ -209,7 +366,7 @@ draw_scale_m_curve <- function(experiment, X_types){
     
     runtime$design_mat <- factor(runtime$design_mat)
     runtime$alt <- factor(runtime$alt)
-    levels(runtime$alt) <- c(fixed_alt = TeX("$#alts = 10$"), fixed_ratio = TeX("$\\pi_1 = 0.1$"))
+    levels(runtime$alt) <- c(fixed_alt = TeX("$m_1 = 10$"), fixed_ratio = TeX("$\\pi_1 = 0.1$"))
     
     # temp <- sort(unique(round(runtime$time)), decreasing = T)
     # time_ticks <- temp[1]

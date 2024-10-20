@@ -56,11 +56,11 @@ get_fdp_power <- function(problem_setting, beta_permutes = NA,
           
             eval(beta_permute)
 
-            # y <- X %*% beta + eval(noise)
-            suc_prob <- exp(X %*% beta) / (exp(X %*% beta) + 1)
-            y <- sapply(1:n, function(obs_i){
-                rbinom(1, 1, suc_prob[obs_i])
-            })
+            y <- X %*% beta + eval(noise)
+            # suc_prob <- exp(X %*% beta) / (exp(X %*% beta) + 1)
+            # y <- sapply(1:n, function(obs_i){
+            #     rbinom(1, 1, suc_prob[obs_i])
+            # })
             # save(X, y, alpha, file = "debug.RData")
 
             sign_beta <- sign(beta)

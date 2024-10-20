@@ -24,7 +24,12 @@ for (drug_class in c("PI", "NRTI", "NNRTI")){
   base_url <- 'http://hivdb.stanford.edu/pages/published_analysis/genophenoPNAS2006'
   tsm_url <- paste(base_url, 'MUTATIONLISTS', 'NP_TSM', drug_class, sep = '/')
   tsm_df <- read.delim(tsm_url, header = FALSE, stringsAsFactors = FALSE)
-  signal_genes[[drug_class]] <- rep(list(tsm_df[, 1]),
+  # signal_genes[[drug_class]] <- rep(list(tsm_df[, 1]),
+  #                                   length(data[[drug_class]]$Y))
+  signals <- unlist(sapply(1:NROW(tsm_df), function(row){
+    paste(tsm_df[row, 1], unlist(strsplit(tsm_df[row, 2], " ")), sep = ".")
+  }))
+  signal_genes[[drug_class]] <- rep(list(paste0("P", signals)),
                                     length(data[[drug_class]]$Y))
 }
 signal_genes <- do.call(c, signal_genes)
@@ -39,9 +44,11 @@ for (i in 1:length(res)){
   for (j in 1:length(alphas)){
     num_discoveries <- lapply(1:n_sample, function(k){
       sapply(res[[i]][[k]][[j]]$rejs, function(rejs){
-        rejs <- unique(get_position(rejs))
-        true_discoveries <- length(intersect(rejs, signals))
-        false_discoveries <- length(setdiff(rejs, signals))
+        # rejs <- unique(get_position(rejs))
+        # true_discoveries <- length(intersect(rejs, signals))
+        # false_discoveries <- length(setdiff(rejs, signals))
+        true_discoveries <- sum(rejs %in% signals)
+        false_discoveries <- sum(!(rejs %in% signals))
         c(true_discoveries, false_discoveries)
       })
     })

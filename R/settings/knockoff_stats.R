@@ -30,8 +30,8 @@ target <- 0.5
 target_at_alpha <- 0.2
 calib_method <- "BH"
 
-sample_size <- 400
-n_cores <- 14
+sample_size <- 100
+n_cores <- 10
 
 knockoffs <- ckn.create.fixed
 statistic <- stat.glmnet_coefdiff_tiebreak

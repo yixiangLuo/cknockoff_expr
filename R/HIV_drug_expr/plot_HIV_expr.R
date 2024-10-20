@@ -26,6 +26,12 @@ for (al in unique(discoveries$alpha)){
                            levels = methods_levels)) %>%
     mutate(drug = paste0(drug_name, " (", drug_class, ")"))
   drug_levels <- unique(data$drug)
+  
+  # TSM_num <- data.frame(drug = factor(unique(data$drug), levels = drug_levels),
+  #                       m1 = c(rep(34, 7), rep(24, 6), rep(15, 3)))
+  TSM_num <- data.frame(drug = factor(unique(data$drug), levels = drug_levels),
+                        m1 = c(rep(60, 7), rep(43, 6), rep(26, 3)))
+  
   plot <- data %>%
     select(-alpha, -drug_name, -drug_class) %>%
     gather("discoveries", "value", -drug, -method) %>%
@@ -37,6 +43,8 @@ for (al in unique(discoveries$alpha)){
                     levels = drug_levels)) %>%
     ggplot(aes(x = method, y = value)) +
     geom_bar(stat = "identity", aes(color = method, fill = method, alpha = discoveries)) +
+    geom_hline(data = TSM_num, aes(yintercept = m1),
+               linetype = "longdash", alpha = 0.6, na.rm = T) +
     facet_wrap(~ drug, nrow = 4) +
     scale_x_discrete(labels = methods_labels) +
     scale_fill_manual(values = method_colors) +

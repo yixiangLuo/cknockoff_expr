@@ -7,16 +7,17 @@ source(here("R", "methods.R"))
 source(here("R", "utils.R"))
 source(here("R", "plot.R"))
 
-# source(here("R", "settings", "test.R"))
+source(here("R", "settings", "test.R"))
 # source(here("R", "settings", "main_expr_10.R"))
 # source(here("R", "settings", "main_expr_30.R"))
 # source(here("R", "settings", "lambdasmax_stat.R"))
+# source(here("R", "settings", "multiple_kn.R"))
 # source(here("R", "settings", "MVR_kn.R"))
 # source(here("R", "settings", "knockoff_stats.R"))
 # source(here("R", "settings", "robust_tNoise.R"))
 # source(here("R", "settings", "robust_noisyBeta.R"))
 # source(here("R", "settings", "cLasso.R"))
-source(here("R", "settings", "ModelX.R"))
+# source(here("R", "settings", "ModelX.R"))
 # source(here("R", "settings", "power_gain.R"))
 
 
@@ -41,14 +42,14 @@ results <- lapply(1:length(X_types), function(iter_i){
   random_X <- random_Xs[iter_i]
   if(exists("targets")) target <- targets[iter_i]
   if(exists("pi1s")) pi1 <- pi1s[iter_i]
-  
+
   print(paste(X_type, pi1, target))
 
   if(!random_X){
     X <- gene_X(X_type, n, p, X_seed)$X
     random_X.data <- list(random_X = random_X)
     mu1 <- signal_calib(calib_method, X, random_X.data, pi1, noise = quote(rnorm(n)),
-                        posit_type, 1, side = "two", nreps = 20,
+                        posit_type, 1, side = "two", nreps = 50,
                         alpha = target_at_alpha, target = target, n_cores = n_cores)
   } else{
     X.res <- gene_X(X_type, n, p, X_seed)
@@ -57,7 +58,7 @@ results <- lapply(1:length(X_types), function(iter_i){
                           n = n, p = p, X_type = X_type, Xcov.true = X.res$Xcov.true,
                           sample_num = 5)
     mu1 <- signal_calib(calib_method, X, random_X.data, pi1, noise = quote(rnorm(n)),
-                        posit_type, 1, side = "two", nreps = 20,
+                        posit_type, 1, side = "two", nreps = 50,
                         alpha = target_at_alpha, target = target, n_cores = n_cores)
   }
 
@@ -92,10 +93,14 @@ for(X_type in X_types){
 # method_shapes <- rep(19, length(method_names))
 
 # X_types <- c("IID_Normal", "MCC", "MCC_Block")
-draw_fdp_power_curve(experiment, X_types, sample_size,
-                     method_names, method_colors, method_shapes,
-                     error_bar = F, direction = F)
+draw_fdp_power_curve_hrz(experiment, X_types, sample_size,
+                         method_names, method_colors, method_shapes,
+                         error_bar = F, direction = F)
 
+
+# draw_fdp_curve(experiment, X_types, sample_size,
+#                method_names, method_colors, method_shapes,
+#                error_bar = F, direction = F)
 # draw_power_gain()
 
 # method_names <- c("BH", "dBH", "knockoff", "cKnockoff", "cKnockoff_STAR")

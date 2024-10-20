@@ -13,13 +13,13 @@ source(here("R", "methods.R"))
 
 experiment <- "power_gain"
 
-p <- 500
+p <- 1000
 n <- 3*p
 
 X_seed <- 2021
 pi1s <- c(5, 10, 20, 30) / p
 
-X_types <- c("IID_Normal", "MCC", "MCC_Block")
+X_types <- c("MCC_Block") # "IID_Normal", "MCC", "MCC_Block"
 posit_types <- rep("random", length(X_types))
 random_Xs <- rep(T, length(X_types))
 

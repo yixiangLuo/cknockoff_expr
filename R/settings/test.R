@@ -13,13 +13,13 @@ source(here("R", "methods.R"))
 
 experiment <- "test"
 
-p <- 30
+p <- 100
 n <- 3*p
 
 X_seed <- 2021
 pi1 <- 10 / p
 
-X_types <- c("IID_Normal", "MCC_Block") # "IID_Normal", "MCC", "MCC_Block", "Sparse"
+X_types <- c("IID_Normal") # "IID_Normal", "MCC", "MCC_Block", "Sparse"
 # posit_types <- c("random", "rand_block5")[(X_types %in% c("MCC_Block"))+1]
 posit_types <- rep("random", length(X_types))
 # random_Xs <- X_types %in% c("IID_Normal")
@@ -50,18 +50,19 @@ makeup_vectors(alphas = alphas, beta_permutes = beta_permutes, noises = noises)
 
 target <- 0.5
 target_at_alpha <- 0.2
-calib_method <- "lasso" # "BH", "lasso"
+calib_method <- "BH" # "BH", "lasso"
 
 
-sample_size <- 20
+sample_size <- 100
 n_cores <- 14
 
 knockoffs <- ckn.create.fixed
-statistic <- ckn.modelX::stat.glmnet_coefdiff_tiebreak  # ckn.modelX
+statistic <- stat.glmnet_coefdiff_tiebreak # ckn.modelX::stat.glmnet_coefdiff_tiebreak
 
 get_method_list <- get_multi_method_list
+method_names <- c("BH", "knockoff", "cKnockoff")
 # method_names <- c("BH", "dBH", "knockoff", "BonBH", "cKnockoff", "cKnockoff_STAR") #, "mKnockoff"
-method_names <- c("knockoff.MX", "cKnockoff.MX")
+# method_names <- c("knockoff.MX", "cKnockoff.MX")
 
 X_titles <- paste0("X: ", X_types)
 

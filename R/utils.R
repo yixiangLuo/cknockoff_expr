@@ -333,28 +333,15 @@ MXkn_calib <- function(X, random_X.data,
                        alpha = 0.05,
                        target = 0.3,
                        n_cores = 7,
-                       family = "guassian"){
-    family <- "binomial"   # change accordingly: "guassian", "binomial"
+                       family = "gaussian"){
+    family <- "gaussian"   # change accordingly: "gaussian", "binomial"
     
     n <- random_X.data$n
     p <- random_X.data$p
-    Xcov.true <- random_X.data$Xcov.true
-    
-    Sigma.inv <- solve(Xcov.true)
-    s <- knockoff:::create.solve_sdp(Xcov.true)
-    s[s <= 1e-5] <- 0
-    
-    Xk_mumat <- diag(p) - Sigma.inv %*% diag(s)
-    cov_kn <- 2 * diag(s) - diag(s) %*% Sigma.inv %*% diag(s)
-    cov_kn_half <- chol(cov_kn)
+    X.cov <- random_X.data$Xcov.true
     
     X_list <- lapply(1:random_X.data$sample_num, function(i){
         gene_X(random_X.data$X_type, n, p, i)$X
-    })
-    X_kn_list <- lapply(1:random_X.data$sample_num, function(i){
-        X <- X_list[[i]]
-        mu_kn <- X %*% Xk_mumat
-        ckn.modelX:::rnorm_mult(mu_kn, cov_kn_half)
     })
     
     X_sample_num <- length(X_list)
@@ -377,9 +364,8 @@ MXkn_calib <- function(X, random_X.data,
             beta <- beta_list[[i]] * mu1
             
             X <- X_list[[(i%%X_sample_num)+1]]
-            X_kn <- X_kn_list[[(i%%X_sample_num)+1]]
             
-            if(family == "guassian"){
+            if(family == "gaussian"){
                 y <- X %*% beta + eval(noise)
             } else{
                 suc_prob <- exp(X %*% beta) / (exp(X %*% beta) + 1)
@@ -388,14 +374,24 @@ MXkn_calib <- function(X, random_X.data,
                 })
             }
             
-            if("sigma_tilde" %in% names(formals(statistic))){
-                kn_stats_obs <- statistic(X, X_kn, y, sigma_tilde = 1)
-            } else{
-                kn_stats_obs <- statistic(X, X_kn, y)
-            }
+            pvals <- sapply(1:p, function(j){
+                trans.mat <- X.cov[j, -j, drop = F] %*% solve(X.cov[-j, -j, drop = F])
+                mean.cond <- c(trans.mat %*% (t(X[, -j, drop = F])))
+                cov.cond <- c(X.cov[j, j, drop = F] - trans.mat %*% X.cov[-j, j, drop = F])
+                
+                # fit_on_rest <- ckn.modelX::cv_coeffs_glmnet(X[, -j], y, family = family, nlambda = 20)
+                # y_adjust <- predict(fit_on_rest, newx = X[, -j])
+                # y_adjusted <- y - y_adjust
+                y_adjusted <- y
+                
+                Xjy_std.cond <- sqrt(sum(y_adjusted^2) * cov.cond)
+                
+                pval <- 2 * pnorm(-abs(sum((X[, j]-mean.cond) * y_adjusted)), sd = Xjy_std.cond)
+            })
             
-            rejs_mxKn <- ckn.modelX:::kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)$selected
-            power_sample <- calc_FDP_power(rejs_mxKn, H0)[2]
+            CRT_rejs <- BH_weighted(pvals, alpha)$rejs
+            
+            power_sample <- calc_FDP_power(CRT_rejs, H0)[2]
             
             return(power_sample)
         })
@@ -562,3 +558,99 @@ parse_name <- function(str){
     str <- str_replace(str, "_STAR", "*")
 }
 
+
+
+
+# MXkn_calib <- function(X, random_X.data,
+#                        pi1, noise = quote(rnorm(n)),
+#                        mu_posit_type, mu_size_type,
+#                        side,
+#                        nreps = 200,
+#                        alpha = 0.05,
+#                        target = 0.3,
+#                        n_cores = 7,
+#                        family = "gaussian"){
+#     family <- "gaussian"   # change accordingly: "gaussian", "binomial"
+#     
+#     n <- random_X.data$n
+#     p <- random_X.data$p
+#     Xcov.true <- random_X.data$Xcov.true
+#     
+#     Sigma.inv <- solve(Xcov.true)
+#     s <- knockoff:::create.solve_sdp(Xcov.true)
+#     s[s <= 1e-5] <- 0
+#     
+#     Xk_mumat <- diag(p) - Sigma.inv %*% diag(s)
+#     cov_kn <- 2 * diag(s) - diag(s) %*% Sigma.inv %*% diag(s)
+#     cov_kn_half <- chol(cov_kn)
+#     
+#     X_list <- lapply(1:random_X.data$sample_num, function(i){
+#         gene_X(random_X.data$X_type, n, p, i)$X
+#     })
+#     X_kn_list <- lapply(1:random_X.data$sample_num, function(i){
+#         X <- X_list[[i]]
+#         mu_kn <- X %*% Xk_mumat
+#         ckn.modelX:::rnorm_mult(mu_kn, cov_kn_half)
+#     })
+#     
+#     X_sample_num <- length(X_list)
+#     
+#     beta_list <- lapply(1:nreps, function(i){
+#         beta <- genmu(p, pi1, 1, mu_posit_type, mu_size_type)
+#         if (side == "right"){
+#             beta <- abs(beta)
+#         } else if (side == "left"){
+#             beta <- -abs(beta)
+#         }
+#         return(beta)
+#     })
+#     
+#     registerDoParallel(n_cores)
+#     
+#     sel_power <- function(mu1){
+#         power <- unlist(foreach(i = 1:nreps) %dopar% {
+#             H0 <- beta_list[[i]] == 0            
+#             beta <- beta_list[[i]] * mu1
+#             
+#             X <- X_list[[(i%%X_sample_num)+1]]
+#             X_kn <- X_kn_list[[(i%%X_sample_num)+1]]
+#             
+#             if(family == "gaussian"){
+#                 y <- X %*% beta + eval(noise)
+#             } else{
+#                 suc_prob <- exp(X %*% beta) / (exp(X %*% beta) + 1)
+#                 y <- sapply(1:n, function(obs_i){
+#                     rbinom(1, 1, suc_prob[obs_i])
+#                 })
+#             }
+#             
+#             statistic <- function(X, X_k, y){
+#                 ckn.modelX::stat.glmnet_coefdiff_tiebreak(X, X_k, y, sigma_tilde = 1,
+#                                                           family = family)
+#             }
+#             if("sigma_tilde" %in% names(formals(statistic))){
+#                 kn_stats_obs <- statistic(X, X_kn, y, sigma_tilde = 1)
+#             } else{
+#                 kn_stats_obs <- statistic(X, X_kn, y)
+#             }
+#             
+#             rejs_mxKn <- ckn.modelX:::kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)$selected
+#             power_sample <- calc_FDP_power(rejs_mxKn, H0)[2]
+#             
+#             return(power_sample)
+#         })
+#         mean(power) - target
+#     }
+#     
+#     lower <- 0
+#     upper <- 10
+#     while (TRUE & upper < 1000){
+#         tmp <- try(uniroot(sel_power, c(lower, upper))$root)
+#         if (class(tmp) == "try-error"){
+#             upper <- upper * 2
+#         } else {
+#             return(tmp)
+#         }
+#     }
+#     return(NA)
+# }

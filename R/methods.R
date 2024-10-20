@@ -261,7 +261,7 @@ get_multi_method_list <- function(X, knockoffs, statistic, method_names, Xcov.tr
             result <- ckn.modelX::cknockoff.MX(X, y, Xcov.true, X_kn,
                                                statistic = statistic,
                                                alpha = alpha,
-                                               family = "binomial",
+                                               family = "gaussian",   # gaussian, binomial
                                                n_cores = 1)
             return(list(selected = result$selected, sign_predict = rep(NA, p)))
         }
@@ -277,9 +277,11 @@ multi_method_shape <- c(3, 4, 17, 6, 23, 19, 15, 19, 17, 19)
 names(multi_method_shape) <- c("BH", "dBH", "knockoff", "mKnockoff", "BonBH", "cKnockoff", "cKnockoff_STAR", "cLasso", "knockoff.MX", "cKnockoff.MX")
 
 
-get_kn_method_list <- function(X, knockoffs, statistic, method_names){
+get_kn_method_list <- function(X, knockoffs, statistic, method_names, Xcov.true = NA){
     X.pack <- process_X(X, knockoffs = knockoffs, intercept = F)
     knockoffs_gene <- function(X){return(X.pack$X_kn.org)}
+    
+    lambda_scale <- 1
 
     methods <- list(
         LSM = function(y, X, alpha){
@@ -294,10 +296,10 @@ get_kn_method_list <- function(X, knockoffs, statistic, method_names){
         },
         C_D_LSM = function(y, X, alpha){
             y.data <- cknockoff:::transform_y(X.pack, y, intercept = F)
-            sigma_tilde <- sqrt(y.data$RSS_XXk / y.data$df_XXk)
+            sigma_tilde <- sqrt(y.data$RSS_XXk / y.data$df_XXk) * lambda_scale
 
             kn_stats_obs <- stat.glmnet_lambdasmax_coarse(X.pack$X.org, X.pack$X_kn.org,
-                                                          y.data$y.org, sigma_tilde = sigma_tilde)
+                                                          c(y.data$y.org), sigma_tilde = sigma_tilde)
 
             result <- cknockoff:::kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)
             sign_predict <- sign(c(matrix(y.data$y.org, nrow = 1) %*% 
@@ -307,7 +309,7 @@ get_kn_method_list <- function(X, knockoffs, statistic, method_names){
         },
         LCD_D_T = function(y, X, alpha){
             y.data <- cknockoff:::transform_y(X.pack, y, intercept = F)
-            sigma_tilde <- sqrt(y.data$RSS_XXk / y.data$df_XXk)
+            sigma_tilde <- sqrt(y.data$RSS_XXk / y.data$df_XXk) * lambda_scale
 
             kn_stats_obs <- stat.glmnet_coefdiff_tiebreak(X.pack$X.org, X.pack$X_kn.org,
                                                           y.data$y.org, sigma_tilde = sigma_tilde)
