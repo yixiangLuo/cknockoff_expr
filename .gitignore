@@ -46,9 +46,11 @@ rsconnect/
 
 figs/*
 !figs/.gitignore
-data/*
 data/*.RData
+data/temp/*
+data/HIV/*
 !data/.gitignore
 !data/temp/.gitignore
+!data/HIV/.gitignore
 log/*
 !log/.gitignore
