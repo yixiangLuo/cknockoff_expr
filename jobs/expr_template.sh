@@ -15,7 +15,7 @@ EXPERIMENT=expr
 
 # run experiments
 
-ml R
+# ml R
 
 Rscript ../R/cluster/experiment.R $EXPERIMENT $SLURM_ARRAY_TASK_ID
 

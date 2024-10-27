@@ -13,7 +13,7 @@
 N_JOBS=400
 EXPR_NAMES=$(./expr_names.sh)
 
-ml R
+# ml R
 
 for EXPR_NAME in $EXPR_NAMES; do
     Rscript ../R/cluster/set_expr.R $EXPR_NAME $N_JOBS
