@@ -10,7 +10,7 @@
 #SBATCH --mail-user=email@address
 #SBATCH --mail-type=ALL
 
-N_JOBS=400
+N_JOBS=200
 EXPR_NAMES=$(./expr_names.sh)
 
 # ml R
