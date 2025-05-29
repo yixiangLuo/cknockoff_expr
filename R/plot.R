@@ -529,7 +529,7 @@ draw_power_gain <- function(){
             for(m1 in m1s){
                 res <- results[[paste(X_type, power, m1, sep = "_D_")]]$FDR_Power
                 data <- rbind(data, data.frame(design_mat = str_replace(X_type, "_", "-"),
-                                               power = power, m1 = m1,
+                                               power = power, m1 = factor(m1),
                                                power_gain = (res$mean[4] - res$mean[3])))
             }
         }
@@ -551,7 +551,7 @@ draw_power_gain <- function(){
               legend.position = "right",
               legend.title=element_text(size=9),
               legend.text=element_text(size=9)) +
-        labs(x = "signal strength", y = "# nonnull variables")
+        labs(x = "signal strength", y = "# non-null variables")
     
     ggsave(filename = here("figs", paste0("power_gain.pdf")),
            plot, width = 7, height = 3)

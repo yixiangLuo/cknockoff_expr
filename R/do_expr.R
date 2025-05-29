@@ -7,7 +7,7 @@ source(here("R", "methods.R"))
 source(here("R", "utils.R"))
 source(here("R", "plot.R"))
 
-source(here("R", "settings", "test.R"))
+# source(here("R", "settings", "test.R"))
 # source(here("R", "settings", "main_expr_10.R"))
 # source(here("R", "settings", "main_expr_30.R"))
 # source(here("R", "settings", "lambdasmax_stat.R"))

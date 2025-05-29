@@ -93,9 +93,9 @@ BonfBH <- function(X, y, alpha, BonfBH_X = NULL){
     tvals2 <- hbeta_2 / sqrt(2 / BonfBH_X$kn_diff_D) / sigmahat
 
     pvals1 <- pvals_t(tvals1, df, side = "two")
-    pvals1[is.na(pvals1)] <- 1
+    # pvals1[is.na(pvals1)] <- 1
     pvals2 <- pvals_t(tvals2, df, side = "two")
-    pvals2[is.na(pvals2)] <- 1
+    # pvals2[is.na(pvals2)] <- 1
 
     pi0_hat <- 2 * (sum(pvals2 > 0.5) + 1) / p
     p_star <- pvals2 * pi0_hat

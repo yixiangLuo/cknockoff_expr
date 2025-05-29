@@ -33,7 +33,7 @@ Required packages:
 
 #### local experiments
 
-1. Create a `my_expr_setting.R` file in `R/settings` (see existed examples), in which specify the experiment settings.
+1. Create a `my_expr_setting.R` file in `R/settings`, in which specify the experiment settings. Existing setting files in `R/settings` can be used to reproduce the numerical experiment figures in the paper.
 2. Run `Rscript R/do_expr.R my_expr_setting`.
 3. The real time progress are shown in `data/temp/progress-my_expr_setting.txt`, the results are stored in `data/my_expr_setting.RData`, and the produced figure is `figs/simu-my_expr_setting.pdf`.
 
